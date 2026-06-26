@@ -1,0 +1,183 @@
+import { Product, Transaction, Debt, ShopSettings } from '../types';
+
+// DEFAULT SEED DATA
+export const DEFAULT_PRODUCTS: Product[] = [
+  { id: 'prod_1', code: '899100110011', name: 'Kopi Susu Gula Aren', category: 'Minuman', price: 15000, purchasePrice: 8000, stock: 45, minStock: 5 },
+  { id: 'prod_2', code: '899100110022', name: 'Es Teh Manis', category: 'Minuman', price: 6000, purchasePrice: 2000, stock: 120, minStock: 10 },
+  { id: 'prod_3', code: '899100110033', name: 'Indomie Goreng Jumbo', category: 'Makanan', price: 10000, purchasePrice: 6500, stock: 30, minStock: 5 },
+  { id: 'prod_4', code: '899100110044', name: 'Keripik Singkong Balado', category: 'Cemilan', price: 8000, purchasePrice: 4500, stock: 18, minStock: 5 },
+  { id: 'prod_5', code: '899100110055', name: 'Roti Bakar Cokelat Keju', category: 'Makanan', price: 18000, purchasePrice: 10000, stock: 25, minStock: 3 },
+  { id: 'prod_6', code: '899100110066', name: 'Air Mineral 600ml', category: 'Minuman', price: 4000, purchasePrice: 1800, stock: 80, minStock: 10 }
+];
+
+export const DEFAULT_SETTINGS: ShopSettings = {
+  shopName: "Toko Kelontong Berkah",
+  shopAddress: "Jl. Merdeka No. 45, Jakarta Pusat",
+  shopPhone: "081234567890",
+  qrisText: "00020101021126610016ID10202111111110203A01511100112345678901234567895204599953033605405100005802ID5913BERKAH STORE6013JAKARTA PUSAT6304A1B2",
+  receiptFooter: "Terima Kasih Telah Berbelanja!\nSemoga Hari Anda Menyenangkan.",
+  currencySymbol: "Rp"
+};
+
+export const DEFAULT_DEBTS: Debt[] = [
+  {
+    id: 'debt_1',
+    customerName: 'Budi Santoso',
+    customerPhone: '089877665544',
+    totalDebt: 50000,
+    remainingDebt: 50000,
+    dueDate: '2026-07-05',
+    status: 'UNPAID',
+    createdAt: '2026-06-26T09:15:00.000Z',
+    payments: []
+  }
+];
+
+// Helper to access Local Storage safely and transparently
+export const getLocalData = <T>(key: string, defaultValue: T): T => {
+  const data = localStorage.getItem(key);
+  return data ? JSON.parse(data) : defaultValue;
+};
+
+export const setLocalData = <T>(key: string, data: T): void => {
+  localStorage.setItem(key, JSON.stringify(data));
+};
+
+// Simple but powerful Local Listener system to emulate Firestore real-time snapshots
+type Listener<T> = (data: T) => void;
+
+let productListeners: Listener<Product[]>[] = [];
+let transactionListeners: Listener<Transaction[]>[] = [];
+let debtListeners: Listener<Debt[]>[] = [];
+let settingsListeners: Listener<ShopSettings>[] = [];
+
+const notifyProducts = () => {
+  const data = getLocalData<Product[]>('pos_products', DEFAULT_PRODUCTS);
+  productListeners.forEach(cb => cb(data));
+};
+
+const notifyTransactions = () => {
+  const data = getLocalData<Transaction[]>('pos_transactions', []);
+  transactionListeners.forEach(cb => cb(data));
+};
+
+const notifyDebts = () => {
+  const data = getLocalData<Debt[]>('pos_debts', DEFAULT_DEBTS);
+  debtListeners.forEach(cb => cb(data));
+};
+
+const notifySettings = () => {
+  const data = getLocalData<ShopSettings>('pos_settings', DEFAULT_SETTINGS);
+  settingsListeners.forEach(cb => cb(data));
+};
+
+// SERVICE DEFINITIONS
+export const dbService = {
+  // Subscribe to Products
+  subscribeProducts: (callback: (products: Product[]) => void) => {
+    productListeners.push(callback);
+    // Send current cached data immediately
+    callback(getLocalData<Product[]>('pos_products', DEFAULT_PRODUCTS));
+    return () => {
+      productListeners = productListeners.filter(cb => cb !== callback);
+    };
+  },
+
+  // Save/Update Product
+  saveProduct: async (product: Product): Promise<void> => {
+    const local = getLocalData<Product[]>('pos_products', DEFAULT_PRODUCTS);
+    const idx = local.findIndex(p => p.id === product.id);
+    if (idx !== -1) {
+      local[idx] = product;
+    } else {
+      local.push(product);
+    }
+    setLocalData('pos_products', local);
+    notifyProducts();
+  },
+
+  // Delete Product
+  deleteProduct: async (id: string): Promise<void> => {
+    const local = getLocalData<Product[]>('pos_products', DEFAULT_PRODUCTS);
+    const filtered = local.filter(p => p.id !== id);
+    setLocalData('pos_products', filtered);
+    notifyProducts();
+  },
+
+  // Subscribe to Transactions
+  subscribeTransactions: (callback: (txs: Transaction[]) => void) => {
+    transactionListeners.push(callback);
+    callback(getLocalData<Transaction[]>('pos_transactions', []));
+    return () => {
+      transactionListeners = transactionListeners.filter(cb => cb !== callback);
+    };
+  },
+
+  // Save Transaction
+  saveTransaction: async (tx: Transaction): Promise<void> => {
+    const local = getLocalData<Transaction[]>('pos_transactions', []);
+    local.unshift(tx);
+    setLocalData('pos_transactions', local);
+    notifyTransactions();
+
+    // Optimistically update product stock immediately in local state
+    const localProds = getLocalData<Product[]>('pos_products', DEFAULT_PRODUCTS);
+    tx.items.forEach(item => {
+      const p = localProds.find(lp => lp.id === item.productId);
+      if (p) p.stock = Math.max(0, p.stock - item.quantity);
+    });
+    setLocalData('pos_products', localProds);
+    notifyProducts();
+  },
+
+  // Subscribe to Debts
+  subscribeDebts: (callback: (debts: Debt[]) => void) => {
+    debtListeners.push(callback);
+    callback(getLocalData<Debt[]>('pos_debts', DEFAULT_DEBTS));
+    return () => {
+      debtListeners = debtListeners.filter(cb => cb !== callback);
+    };
+  },
+
+  // Save Debt
+  saveDebt: async (debt: Debt): Promise<void> => {
+    const local = getLocalData<Debt[]>('pos_debts', DEFAULT_DEBTS);
+    const idx = local.findIndex(d => d.id === debt.id);
+    if (idx !== -1) {
+      local[idx] = debt;
+    } else {
+      local.unshift(debt);
+    }
+    setLocalData('pos_debts', local);
+    notifyDebts();
+  },
+
+  // Subscribe to Shop Settings
+  subscribeSettings: (callback: (settings: ShopSettings) => void) => {
+    settingsListeners.push(callback);
+    callback(getLocalData<ShopSettings>('pos_settings', DEFAULT_SETTINGS));
+    return () => {
+      settingsListeners = settingsListeners.filter(cb => cb !== callback);
+    };
+  },
+
+  // Save Settings
+  saveSettings: async (settings: ShopSettings): Promise<void> => {
+    setLocalData('pos_settings', settings);
+    notifySettings();
+  },
+
+  // Reset App Data
+  resetAllData: async (): Promise<void> => {
+    localStorage.clear();
+    setLocalData('pos_products', DEFAULT_PRODUCTS);
+    setLocalData('pos_settings', DEFAULT_SETTINGS);
+    setLocalData('pos_transactions', []);
+    setLocalData('pos_debts', DEFAULT_DEBTS);
+    
+    notifyProducts();
+    notifyTransactions();
+    notifyDebts();
+    notifySettings();
+  }
+};

@@ -1,0 +1,6 @@
+{
+  "name": "POS Kasir Pintar",
+  "description": "Aplikasi POS Kasir Modern dengan Manajemen Stok, Catatan Utang Pelanggan, Analitik Real-Time, QRIS, dan Backup Data.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

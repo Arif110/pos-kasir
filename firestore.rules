@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity validations (strictly typed for security)
+    function isValidProduct(p) {
+      return p.keys().hasAll(['code', 'name', 'category', 'price', 'purchasePrice', 'stock', 'minStock'])
+        && p.code is string && p.code.size() <= 64
+        && p.name is string && p.name.size() <= 200
+        && p.category is string && p.category.size() <= 100
+        && (p.price is int || p.price is float) && p.price >= 0
+        && (p.purchasePrice is int || p.purchasePrice is float) && p.purchasePrice >= 0
+        && (p.stock is int || p.stock is float) && p.stock >= 0
+        && (p.minStock is int || p.minStock is float) && p.minStock >= 0;
+    }
+
+    function isValidTransaction(t) {
+      return t.keys().hasAll(['invoiceNumber', 'date', 'items', 'total', 'totalProfit', 'paymentType', 'amountPaid', 'change'])
+        && t.invoiceNumber is string && t.invoiceNumber.size() <= 100
+        && t.date is string && t.date.size() <= 100
+        && t.items is list
+        && (t.total is int || t.total is float)
+        && (t.totalProfit is int || t.totalProfit is float)
+        && t.paymentType is string && (t.paymentType == 'CASH' || t.paymentType == 'QRIS' || t.paymentType == 'DEBT')
+        && (t.amountPaid is int || t.amountPaid is float) && t.amountPaid >= 0
+        && (t.change is int || t.change is float) && t.change >= 0;
+    }
+
+    function isValidDebt(d) {
+      return d.keys().hasAll(['customerName', 'customerPhone', 'totalDebt', 'remainingDebt', 'dueDate', 'status', 'payments', 'createdAt'])
+        && d.customerName is string && d.customerName.size() <= 200
+        && d.customerPhone is string && d.customerPhone.size() <= 50
+        && (d.totalDebt is int || d.totalDebt is float) && d.totalDebt >= 0
+        && (d.remainingDebt is int || d.remainingDebt is float) && d.remainingDebt >= 0
+        && d.dueDate is string && d.dueDate.size() <= 100
+        && d.status is string && (d.status == 'UNPAID' || d.status == 'PARTIAL' || d.status == 'PAID')
+        && d.payments is list
+        && d.createdAt is string && d.createdAt.size() <= 100;
+    }
+
+    function isValidShopSettings(s) {
+      return s.keys().hasAll(['shopName', 'shopAddress', 'shopPhone', 'qrisText', 'receiptFooter', 'currencySymbol'])
+        && s.shopName is string && s.shopName.size() <= 200
+        && s.shopAddress is string && s.shopAddress.size() <= 500
+        && s.shopPhone is string && s.shopPhone.size() <= 50
+        && s.qrisText is string && s.qrisText.size() <= 2000
+        && s.receiptFooter is string && s.receiptFooter.size() <= 1000
+        && s.currencySymbol is string && s.currencySymbol.size() <= 10;
+    }
+
+    // Collection match rules
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isValidId(productId) && isValidProduct(incoming());
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if true;
+      allow write: if isValidId(transactionId) && isValidTransaction(incoming());
+    }
+
+    match /debts/{debtId} {
+      allow read: if true;
+      allow write: if isValidId(debtId) && isValidDebt(incoming());
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isValidId(settingId) && settingId == 'shop_profile' && isValidShopSettings(incoming());
+    }
+  }
+}
