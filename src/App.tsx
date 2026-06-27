@@ -138,7 +138,11 @@ export default function App() {
       return prevProducts.map(p => {
         const boughtItem = tx.items.find(item => item.productId === p.id);
         if (boughtItem) {
-          return { ...p, stock: Math.max(0, p.stock - boughtItem.quantity) };
+          return { 
+            ...p, 
+            stock: Math.max(0, p.stock - boughtItem.quantity),
+            lastSoldDate: tx.date 
+          };
         }
         return p;
       });

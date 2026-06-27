@@ -8,12 +8,12 @@ export const DEFAULT_CATEGORIES: string[] = [
 ];
 
 export const DEFAULT_PRODUCTS: Product[] = [
-  { id: 'prod_1', code: '899100110011', name: 'Kopi Susu Gula Aren', category: 'Minuman', price: 15000, purchasePrice: 8000, stock: 45, minStock: 5 },
-  { id: 'prod_2', code: '899100110022', name: 'Es Teh Manis', category: 'Minuman', price: 6000, purchasePrice: 2000, stock: 120, minStock: 10 },
-  { id: 'prod_3', code: '899100110033', name: 'Indomie Goreng Jumbo', category: 'Makanan', price: 10000, purchasePrice: 6500, stock: 30, minStock: 5 },
-  { id: 'prod_4', code: '899100110044', name: 'Keripik Singkong Balado', category: 'Cemilan', price: 8000, purchasePrice: 4500, stock: 18, minStock: 5 },
-  { id: 'prod_5', code: '899100110055', name: 'Roti Bakar Cokelat Keju', category: 'Makanan', price: 18000, purchasePrice: 10000, stock: 25, minStock: 3 },
-  { id: 'prod_6', code: '899100110066', name: 'Air Mineral 600ml', category: 'Minuman', price: 4000, purchasePrice: 1800, stock: 80, minStock: 10 }
+  { id: 'prod_1', code: '899100110011', name: 'Kopi Susu Gula Aren', category: 'Minuman', price: 15000, purchasePrice: 8000, stock: 45, minStock: 5, entryDate: '2026-06-26' },
+  { id: 'prod_2', code: '899100110022', name: 'Es Teh Manis', category: 'Minuman', price: 6000, purchasePrice: 2000, stock: 120, minStock: 10, entryDate: '2026-06-26' },
+  { id: 'prod_3', code: '899100110033', name: 'Indomie Goreng Jumbo', category: 'Makanan', price: 10000, purchasePrice: 6500, stock: 30, minStock: 5, entryDate: '2026-06-26' },
+  { id: 'prod_4', code: '899100110044', name: 'Keripik Singkong Balado', category: 'Cemilan', price: 8000, purchasePrice: 4500, stock: 18, minStock: 5, entryDate: '2026-06-26' },
+  { id: 'prod_5', code: '899100110055', name: 'Roti Bakar Cokelat Keju', category: 'Makanan', price: 18000, purchasePrice: 10000, stock: 25, minStock: 3, entryDate: '2026-06-26' },
+  { id: 'prod_6', code: '899100110066', name: 'Air Mineral 600ml', category: 'Minuman', price: 4000, purchasePrice: 1800, stock: 80, minStock: 10, entryDate: '2026-06-26' }
 ];
 
 export const DEFAULT_SETTINGS: ShopSettings = {
@@ -25,7 +25,8 @@ export const DEFAULT_SETTINGS: ShopSettings = {
   currencySymbol: "Rp.",
   ownerUsername: "owner",
   ownerPassword: "123",
-  ownerName: "Arif Rahman"
+  ownerName: "Arif Rahman",
+  localPrintUrl: "http://localhost:3000/print"
 };
 
 export const DEFAULT_DEBTS: Debt[] = [
@@ -176,11 +177,14 @@ export const dbService = {
     setLocalData('pos_transactions', local);
     notifyTransactions();
 
-    // Optimistically update product stock immediately in local state
+    // Optimistically update product stock and last sold date immediately in local state
     const localProds = getLocalData<Product[]>('pos_products', DEFAULT_PRODUCTS);
     tx.items.forEach(item => {
       const p = localProds.find(lp => lp.id === item.productId);
-      if (p) p.stock = Math.max(0, p.stock - item.quantity);
+      if (p) {
+        p.stock = Math.max(0, p.stock - item.quantity);
+        p.lastSoldDate = tx.date; // Update the date of last sold product
+      }
     });
     setLocalData('pos_products', localProds);
     notifyProducts();

@@ -10,6 +10,8 @@ export interface Product {
   satuanJual?: string;
   satuanGrosir?: string;
   expiryDate?: string; // Format: YYYY-MM-DD
+  entryDate?: string; // Automatically captured entry date (ISO or local format)
+  lastSoldDate?: string; // Automatically captured last checkout/sale date (ISO or local format)
 }
 
 export interface CartItem {
@@ -69,6 +71,7 @@ export interface ShopSettings {
   ownerUsername?: string;
   ownerPassword?: string;
   ownerName?: string;
+  localPrintUrl?: string;
 }
 
 export interface UserProfile {

@@ -17,7 +17,9 @@ import {
   Copy,
   Download,
   Check,
-  Package
+  Package,
+  AlertTriangle,
+  BellRing
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -27,7 +29,9 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  Cell
+  Cell,
+  AreaChart,
+  Area
 } from 'recharts';
 import { Transaction, Product, Debt, ShopSettings } from '../types';
 
@@ -234,6 +238,24 @@ export default function AnalitikTab({
 
   const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
+  // Low stock products (stock <= minStock)
+  const lowStockProducts = useMemo(() => {
+    return products.filter(p => p.stock <= p.minStock);
+  }, [products]);
+
+  // Near-expiry products (expiryDate within next 30 days)
+  const nearExpiryProducts = useMemo(() => {
+    const today = new Date();
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(today.getDate() + 30);
+    
+    return products.filter(p => {
+      if (!p.expiryDate) return false;
+      const exp = new Date(p.expiryDate);
+      return exp >= today && exp <= thirtyDaysFromNow;
+    });
+  }, [products]);
+
   // Filter transaction histories
   const filteredHistories = transactions.filter(t => {
     const matchesSearch = t.invoiceNumber.toLowerCase().includes(historySearch.toLowerCase()) || 
@@ -245,14 +267,14 @@ export default function AnalitikTab({
     <div className="space-y-4">
       
       {/* Top Selector Subtabs */}
-      <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 w-full sm:w-80">
+      <div className="flex items-center gap-2 bg-slate-900/60 p-1.5 rounded-xl w-fit border border-slate-800/80">
         <button
           id="tab_analitik_dashboard"
           onClick={() => setActiveSubTab('STATISTIK')}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
+          className={`text-xs font-bold px-4 py-2 rounded-lg transition-all active:scale-[0.98] cursor-pointer ${
             activeSubTab === 'STATISTIK'
-              ? 'bg-slate-950 text-white shadow-sm'
-              : 'text-slate-600 hover:text-slate-900'
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20 font-extrabold'
+              : 'text-slate-300 hover:text-white hover:bg-slate-800/40'
           }`}
         >
           Dashboard Analitik
@@ -260,10 +282,10 @@ export default function AnalitikTab({
         <button
           id="tab_analitik_history"
           onClick={() => setActiveSubTab('RIWAYAT_PENJUALAN')}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
+          className={`text-xs font-bold px-4 py-2 rounded-lg transition-all active:scale-[0.98] cursor-pointer ${
             activeSubTab === 'RIWAYAT_PENJUALAN'
-              ? 'bg-slate-950 text-white shadow-sm'
-              : 'text-slate-600 hover:text-slate-900'
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20 font-extrabold'
+              : 'text-slate-300 hover:text-white hover:bg-slate-800/40'
           }`}
         >
           Riwayat Penjualan
@@ -274,159 +296,204 @@ export default function AnalitikTab({
         /* ANALYTICS STATS VIEW */
         <div className="space-y-6">
           {/* Summary metrics cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             
-            {/* Card 1: Revenue */}
-            <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
-              <div className="absolute right-0 bottom-0 text-slate-100 pointer-events-none">
-                <DollarSign className="w-24 h-24 translate-x-3 translate-y-3" />
+            {/* 1. KARTU OMSET PENJUALAN */}
+            <div className="bg-[#131a2a]/55 backdrop-blur-md border border-white/5 rounded-2xl p-5 relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:border-white/10 hover:shadow-[0_12px_30px_-10px_rgba(0,0,0,0.5)]">
+              {/* Ambient Glow Effect */}
+              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all duration-500 pointer-events-none"></div>
+              
+              <div className="flex justify-between items-start mb-3">
+                <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">Omset Penjualan</span>
+                <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">+100%</span>
               </div>
-              <div className="flex justify-between items-center text-slate-400 text-xs font-bold uppercase tracking-wider">
-                <span>Omset Penjualan</span>
-                <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold">+100%</span>
+              <div className="text-2xl font-extrabold text-white tracking-tight mb-2 font-mono">
+                {formatPrice(totalRevenue)}
               </div>
-              <p className="text-xl font-extrabold font-mono text-slate-900">{formatPrice(totalRevenue)}</p>
-              <div className="text-[10px] text-slate-400">Akumulasi total omset kotor</div>
+              <p className="text-[11px] text-slate-500 leading-normal">Akumulasi total omset kotor</p>
             </div>
 
-            {/* Card 2: Net Profit */}
-            <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
-              <div className="absolute right-0 bottom-0 text-emerald-50/60 pointer-events-none">
-                <TrendingUp className="w-24 h-24 translate-x-3 translate-y-3" />
+            {/* 2. KARTU LABA BERSIH */}
+            <div className="bg-[#131a2a]/55 backdrop-blur-md border border-white/5 rounded-2xl p-5 relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:border-white/10 hover:shadow-[0_12px_30px_-10px_rgba(0,0,0,0.5)]">
+              {/* Ambient Glow Effect */}
+              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-teal-500/10 rounded-full blur-2xl group-hover:bg-teal-500/20 transition-all duration-500 pointer-events-none"></div>
+              
+              <div className="flex justify-between items-start mb-3">
+                <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">Laba Bersih</span>
+                <span className="text-[10px] font-extrabold text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded border border-teal-500/20">NET</span>
               </div>
-              <div className="flex justify-between items-center text-slate-400 text-xs font-bold uppercase tracking-wider">
-                <span>Laba Bersih</span>
-                <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold">Net</span>
+              <div className="text-2xl font-extrabold text-white tracking-tight mb-2 font-mono">
+                {formatPrice(totalProfit)}
               </div>
-              <p className="text-xl font-extrabold font-mono text-emerald-850">{formatPrice(totalProfit)}</p>
-              <div className="text-[10px] text-slate-400">Selisih penjualan minus modal</div>
+              <p className="text-[11px] text-slate-500 leading-normal">Selisih penjualan minus modal</p>
             </div>
 
-            {/* Card 3: Outstanding Customer Debt */}
-            <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
-              <div className="absolute right-0 bottom-0 text-amber-50/60 pointer-events-none">
-                <ArrowDownLeft className="w-24 h-24 translate-x-3 translate-y-3" />
+            {/* 3. KARTU PIUTANG AKTIF */}
+            <div className="bg-[#131a2a]/55 backdrop-blur-md border border-white/5 rounded-2xl p-5 relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:border-white/10 hover:shadow-[0_12px_30px_-10px_rgba(0,0,0,0.5)]">
+              {/* Ambient Glow Effect */}
+              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-all duration-500 pointer-events-none"></div>
+              
+              <div className="flex justify-between items-start mb-3">
+                <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">Piutang Aktif</span>
+                <span className="text-[10px] font-extrabold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">UTANG</span>
               </div>
-              <div className="flex justify-between items-center text-slate-400 text-xs font-bold uppercase tracking-wider">
-                <span>Piutang Aktif</span>
-                <span className="text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold">Utang</span>
+              <div className="text-2xl font-extrabold text-amber-500 tracking-tight mb-2 font-mono">
+                {formatPrice(totalOutstandingDebt)}
               </div>
-              <p className="text-xl font-extrabold font-mono text-amber-600">{formatPrice(totalOutstandingDebt)}</p>
-              <div className="text-[10px] text-slate-400">Total tagihan utang belum lunas</div>
+              <p className="text-[11px] text-slate-500 leading-normal">Total tagihan utang belum lunas</p>
             </div>
 
-            {/* Card 4: Total transactions */}
-            <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
-              <div className="absolute right-0 bottom-0 text-blue-50/60 pointer-events-none">
-                <ShoppingBag className="w-24 h-24 translate-x-3 translate-y-3" />
+            {/* 4. KARTU JUMLAH TRANSAKSI */}
+            <div className="bg-[#131a2a]/55 backdrop-blur-md border border-white/5 rounded-2xl p-5 relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:border-white/10 hover:shadow-[0_12px_30px_-10px_rgba(0,0,0,0.5)]">
+              {/* Ambient Glow Effect */}
+              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all duration-500 pointer-events-none"></div>
+              
+              <div className="flex justify-between items-start mb-3">
+                <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">Jumlah Transaksi</span>
+                <span className="text-[10px] font-extrabold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">VOL</span>
               </div>
-              <div className="flex justify-between items-center text-slate-400 text-xs font-bold uppercase tracking-wider">
-                <span>Jumlah Transaksi</span>
-                <span className="text-blue-800 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold">Vol</span>
+              <div className="text-2xl font-extrabold text-white tracking-tight mb-2 font-mono">
+                {totalTxCount} <span className="text-lg font-medium text-slate-400">Nota</span>
               </div>
-              <p className="text-xl font-extrabold font-mono text-slate-900">{totalTxCount} Nota</p>
-              <div className="text-[10px] text-slate-400">Total faktur terbit di database</div>
+              <p className="text-[11px] text-slate-500 leading-normal">Total faktur terbit di database</p>
             </div>
 
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Sales Trend Line Chart Panel */}
-            <div id="trend_chart_panel" className="lg:col-span-8 bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Tren Penjualan (7 Hari Terakhir)</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Grafik real-time transaksi penjualan terkini</p>
-                </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative">
+            {/* Ambient Glow Effects */}
+            <div className="absolute -top-20 -left-20 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-amber-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+            {/* 1. Area Tren Penjualan (Kiri & Tengah) */}
+            <div id="trend_chart_panel" className="lg:col-span-2 bg-[#131a2a]/60 backdrop-blur-md border border-white/5 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+              <div className="mb-4">
+                <h2 className="text-lg font-bold text-white tracking-tight">
+                  Tren Penjualan <span className="text-emerald-400 font-normal text-sm ml-1">(7 Hari Terakhir)</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">Grafik real-time transaksi penjualan terkini</p>
               </div>
-
-              {/* Custom SVG Line Chart */}
-              <div className="w-full overflow-hidden flex justify-center py-2">
-                <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full max-w-2xl h-auto">
-                  {/* Grid Lines */}
-                  <line x1={padding} y1={padding} x2={chartWidth - padding} y2={padding} stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="3" />
-                  <line x1={padding} y1={(chartHeight) / 2} x2={chartWidth - padding} y2={(chartHeight) / 2} stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="3" />
-                  <line x1={padding} y1={chartHeight - padding} x2={chartWidth - padding} y2={chartHeight - padding} stroke="#cbd5e1" strokeWidth="1" />
-
-                  {/* Lines path */}
-                  {points.length > 1 && (
-                    <path
-                      d={linePath}
-                      fill="none"
-                      stroke="#059669"
-                      strokeWidth="3.5"
-                      strokeLinecap="round"
+              
+              {/* Responsive Area Chart */}
+              <div className="h-64 w-full mt-2 relative z-10">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart 
+                    data={dailyTrend} 
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient id="salesChartGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#10b981" stopOpacity={0.25} />
+                        <stop offset="100%" stopColor="#10b981" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" vertical={false} />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#64748b" 
+                      fontSize={11} 
+                      tickLine={false} 
+                      axisLine={false} 
                     />
-                  )}
-
-                  {/* Interactive Nodes and Values */}
-                  {points.map((p, i) => (
-                    <g key={i}>
-                      {/* Circle node */}
-                      <circle
-                        cx={p.x}
-                        cy={p.y}
-                        r="5.5"
-                        fill="#ffffff"
-                        stroke="#059669"
-                        strokeWidth="2.5"
-                      />
-                      {/* Date labels */}
-                      <text
-                        x={p.x}
-                        y={chartHeight - 10}
-                        fill="#64748b"
-                        fontSize="9.5"
-                        fontFamily="monospace"
-                        textAnchor="middle"
-                      >
-                        {p.label}
-                      </text>
-                      {/* Price values floating */}
-                      <text
-                        x={p.x}
-                        y={p.y - 12}
-                        fill="#047857"
-                        fontSize="8.5"
-                        fontWeight="bold"
-                        fontFamily="monospace"
-                        textAnchor="middle"
-                      >
-                        {p.val > 0 ? (p.val / 1000).toFixed(0) + 'k' : ''}
-                      </text>
-                    </g>
-                  ))}
-                </svg>
+                    <YAxis 
+                      stroke="#475569" 
+                      fontSize={10} 
+                      tickLine={false} 
+                      axisLine={false} 
+                      tickFormatter={(val) => val === 0 ? '0' : `${(val / 1000).toFixed(0)}k`}
+                    />
+                    <Tooltip 
+                      content={({ active, payload }: any) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="bg-slate-900 text-white p-3 rounded-xl border border-slate-800 shadow-xl text-xs font-sans space-y-1">
+                              <p className="font-bold text-slate-200">{payload[0].payload.date}</p>
+                              <p className="font-mono text-emerald-400 font-semibold">
+                                Omset: <span className="font-extrabold text-white">Rp {payload[0].value.toLocaleString('id-ID')}</span>
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }} 
+                      cursor={{ fill: 'rgba(255, 255, 255, 0.03)', radius: 12 }} 
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="sales" 
+                      stroke="#10b981" 
+                      strokeWidth={3}
+                      fillOpacity={1} 
+                      fill="url(#salesChartGradient)" 
+                      dot={{ r: 4, strokeWidth: 1.5, fill: '#10b981', stroke: '#fff' }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Best Sellers Ranking */}
-            <div id="best_sellers_panel" className="lg:col-span-4 bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">Barang Paling Laris</h3>
+            {/* 2. Area Barang Paling Laris (Kanan) */}
+            <div id="best_sellers_panel" className="bg-[#131a2a]/60 backdrop-blur-md border border-white/5 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+              <div className="mb-5">
+                <h2 className="text-lg font-bold text-white tracking-tight">Barang Paling Laris</h2>
                 <p className="text-xs text-slate-400 mt-0.5">Ranking berdasarkan volume penjualan</p>
               </div>
 
-              <div className="space-y-4 pt-1">
+              {/* List Item Ranks */}
+              <div className="space-y-4 flex-1 flex flex-col justify-center">
                 {bestSellers.map((item, idx) => {
-                  const pct = Math.round((item.qty / maxQty) * 100);
+                  const pct = maxQty > 0 ? Math.round((item.qty / maxQty) * 100) : 0;
+                  const isRank1 = idx === 0;
+                  const isRank2 = idx === 1;
+                  const isRank3 = idx === 2;
+                  
                   return (
-                    <div id={`best_seller_rank_${idx}`} key={idx} className="space-y-1.5">
-                      <div className="flex justify-between text-xs font-semibold text-slate-700">
-                        <span className="truncate max-w-[180px] text-slate-900 font-bold">#{idx + 1} {item.name}</span>
-                        <span className="font-mono text-emerald-700 font-bold">{item.qty} Pcs</span>
+                    <div 
+                      key={idx} 
+                      className={`p-3.5 rounded-xl border relative overflow-hidden transition-all duration-300 ${
+                        isRank1 
+                          ? 'bg-slate-900/40 border-amber-500/20 shadow-lg shadow-amber-500/5' 
+                          : 'bg-slate-900/20 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      {isRank1 && (
+                        <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-500/10 to-transparent w-24 h-full pointer-events-none"></div>
+                      )}
+                      <div className="flex justify-between items-start mb-1.5">
+                        <div className="min-w-0 flex-1">
+                          <span className={`text-xs font-bold uppercase tracking-wider mr-1.5 ${
+                            isRank1 ? 'text-amber-400' : isRank2 ? 'text-slate-400' : isRank3 ? 'text-amber-700/80' : 'text-slate-500'
+                          }`}>
+                            #{idx + 1}
+                          </span>
+                          <span className="text-sm font-semibold text-white truncate max-w-[150px] inline-block align-middle">
+                            {item.name}
+                          </span>
+                        </div>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-md border ${
+                          isRank1 
+                            ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' 
+                            : 'text-slate-300 bg-slate-800 border-slate-700'
+                        }`}>
+                          {item.qty} Pcs
+                        </span>
                       </div>
-                      
-                      {/* Progress Bar indicator */}
-                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200/60">
+                      <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mb-1">
                         <div 
-                          className="bg-emerald-600 h-full rounded-full transition-all duration-500" 
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            isRank1 
+                              ? 'bg-gradient-to-r from-amber-500 to-yellow-400' 
+                              : isRank2
+                              ? 'bg-slate-400'
+                              : 'bg-slate-600'
+                          }`} 
                           style={{ width: `${pct}%` }}
-                        />
+                        ></div>
                       </div>
-                      <div className="text-[10px] text-slate-400 flex justify-between">
+                      <div className="flex justify-between text-[11px] text-slate-400">
                         <span>Total Nilai Omset</span>
-                        <span className="font-mono text-slate-700 font-semibold">{formatPrice(item.revenue)}</span>
+                        <span className="font-medium text-slate-300">{formatPrice(item.revenue)}</span>
                       </div>
                     </div>
                   );
@@ -442,129 +509,285 @@ export default function AnalitikTab({
           </div>
 
           {/* Stock Distribution per Category Panel */}
-          <div id="category_stock_distribution_panel" className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
-            <div className="flex items-center gap-2">
-              <Package className="w-5 h-5 text-slate-800" />
+          <div 
+            id="category_stock_distribution_panel" 
+            className="w-full bg-[#0b0f19] text-slate-200 rounded-3xl p-6 sm:p-8 border border-white/5 shadow-2xl relative overflow-hidden font-sans"
+          >
+            {/* Glow Effects */}
+            <div className="absolute -top-24 -left-24 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            {/* Header Dashboard */}
+            <div className="flex items-start justify-between mb-8 border-b border-slate-800 pb-6 relative z-10">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Distribusi Stok per Kategori</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Melihat volume total persediaan barang per kategori produk</p>
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="p-2.5 bg-purple-500/10 rounded-xl text-purple-400">
+                    <Package className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-extrabold tracking-tight text-white">Distribusi Stok per Kategori</h3>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-400 ml-12">Melihat volume total persediaan barang per kategori produk</p>
               </div>
             </div>
 
             {categoryStockData.length === 0 ? (
-              <div className="py-12 text-center text-xs text-slate-400">
+              <div className="py-12 text-center text-xs text-slate-400 relative z-10">
                 Belum ada data stok barang. Tambahkan produk ke inventori terlebih dahulu!
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-                {/* Left: Recharts Bar Chart */}
-                <div className="lg:col-span-8 h-[280px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      data={categoryStockData} 
-                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                      <XAxis 
-                        dataKey="name" 
-                        stroke="#94a3b8" 
-                        fontSize={11} 
-                        tickLine={false} 
-                        axisLine={false} 
-                      />
-                      <YAxis 
-                        stroke="#94a3b8" 
-                        fontSize={11} 
-                        tickLine={false} 
-                        axisLine={false} 
-                        allowDecimals={false}
-                      />
-                      <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc', radius: 8 }} />
-                      <Bar 
-                        dataKey="stock" 
-                        radius={[8, 8, 0, 0]} 
-                        maxBarSize={45}
+              /* Konten Utama Grid */
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
+                
+                {/* Area Grafik Batang */}
+                <div className="lg:col-span-2 bg-[#161c2d]/40 rounded-2xl p-6 border border-white/5 flex flex-col justify-between min-h-[350px]">
+                  <div className="mb-3">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Visualisasi Volume</span>
+                  </div>
+                  <div className="h-[280px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart 
+                        data={categoryStockData} 
+                        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                       >
-                        {categoryStockData.map((entry, index) => {
-                          const isDominant = index === 0;
-                          return (
-                            <Cell 
-                              key={`cell-${index}`} 
-                              fill={isDominant ? '#4f46e5' : '#6366f1'} 
-                              fillOpacity={isDominant ? 1 : 0.8}
-                              className="transition-all duration-300 hover:opacity-100"
-                            />
-                          );
-                        })}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                        <defs>
+                          <linearGradient id="gradientMinuman" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#6366f1" />
+                            <stop offset="100%" stopColor="#a855f7" stopOpacity={0.1} />
+                          </linearGradient>
+                          <linearGradient id="gradientMakanan" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#a855f7" />
+                            <stop offset="100%" stopColor="#ec4899" stopOpacity={0.1} />
+                          </linearGradient>
+                          <linearGradient id="gradientCemilan" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#ec4899" />
+                            <stop offset="100%" stopColor="#f43f5e" stopOpacity={0.1} />
+                          </linearGradient>
+                          <linearGradient id="gradientOthers" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#334155" />
+                            <stop offset="100%" stopColor="#1e293b" stopOpacity={0.1} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                        <XAxis 
+                          dataKey="name" 
+                          stroke="#64748b" 
+                          fontSize={11} 
+                          tickLine={false} 
+                          axisLine={false} 
+                        />
+                        <YAxis 
+                          stroke="#64748b" 
+                          fontSize={11} 
+                          tickLine={false} 
+                          axisLine={false} 
+                          allowDecimals={false}
+                        />
+                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)', radius: 12 }} />
+                        <Bar 
+                          dataKey="stock" 
+                          radius={[12, 12, 0, 0]} 
+                          maxBarSize={40}
+                        >
+                          {categoryStockData.map((entry, index) => {
+                            const gradients = ['url(#gradientMinuman)', 'url(#gradientMakanan)', 'url(#gradientCemilan)'];
+                            const fill = gradients[index % gradients.length] || 'url(#gradientOthers)';
+                            return (
+                              <Cell 
+                                key={`cell-${index}`} 
+                                fill={fill}
+                                stroke={index === 0 ? '#818cf8' : index === 1 ? '#c084fc' : index === 2 ? '#f472b6' : '#475569'}
+                                strokeWidth={1.5}
+                                className="transition-all duration-300 hover:opacity-100"
+                              />
+                            );
+                          })}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
 
-                {/* Right: Summary Cards and List */}
-                <div className="lg:col-span-4 space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Metric 1: Total Stock */}
-                    <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl space-y-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Stok Toko</span>
-                      <p className="text-base font-extrabold text-slate-800 font-mono">
-                        {totalAllStock.toLocaleString('id-ID')} <span className="text-[10px] text-slate-500 font-sans font-normal">Unit</span>
-                      </p>
+                {/* Area Ringkasan Data */}
+                <div className="space-y-6">
+                  {/* Grid Dua Kartu Atas */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Kartu Total Stok */}
+                    <div className="bg-[#161c2d]/60 backdrop-blur-md border border-white/5 p-5 rounded-2xl border-l-4 border-blue-500 shadow-lg">
+                      <p className="text-[10px] sm:text-xs font-semibold text-slate-400 tracking-wider uppercase mb-1">Total Stok Toko</p>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-mono">{totalAllStock.toLocaleString('id-ID')}</span>
+                        <span className="text-xs font-medium text-slate-400">Unit</span>
+                      </div>
                     </div>
 
-                    {/* Metric 2: Dominant Category */}
-                    <div className="bg-indigo-50/50 border border-indigo-100/50 p-3 rounded-xl space-y-1">
-                      <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider block">Kategori Terbanyak</span>
-                      <p className="text-sm font-extrabold text-indigo-700 truncate leading-none mt-1" title={dominantCategory?.name}>
-                        {dominantCategory?.name}
+                    {/* Kartu Kategori Terbanyak */}
+                    <div className="bg-[#161c2d]/60 backdrop-blur-md border border-white/5 p-5 rounded-2xl border-l-4 border-purple-500 shadow-lg">
+                      <p className="text-[10px] sm:text-xs font-semibold text-slate-400 tracking-wider uppercase mb-1">Kategori Terbanyak</p>
+                      <p className="text-base sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 truncate">
+                        {dominantCategory?.name || '-'}
                       </p>
                       {dominantCategory && totalAllStock > 0 && (
-                        <span className="text-[9px] text-indigo-400 font-mono font-bold block mt-0.5">
+                        <p className="text-[10px] text-purple-400/80 mt-1">
                           {Math.round((dominantCategory.stock / totalAllStock) * 100)}% dari total stok
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Top list of categories stock */}
-                  <div className="space-y-2 border-t border-slate-100 pt-3">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Porsi Stok Per Kategori</span>
-                    <div className="space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
-                      {categoryStockData.slice(0, 4).map((item, index) => {
-                        const percentage = totalAllStock > 0 ? Math.round((item.stock / totalAllStock) * 100) : 0;
-                        return (
-                          <div key={index} className="flex items-center justify-between text-xs py-0.5">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className={`w-2 h-2 rounded-full shrink-0 ${index === 0 ? 'bg-indigo-600' : 'bg-indigo-400'}`} />
-                              <span className="font-semibold text-slate-700 truncate">{item.name}</span>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="font-mono text-slate-900 font-semibold">{item.stock.toLocaleString('id-ID')} unit</span>
-                              <span className="text-[10px] text-slate-400 font-mono">({percentage}%)</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {categoryStockData.length > 4 && (
-                        <p className="text-[10px] text-slate-400 italic pt-1 text-center">
-                          + {categoryStockData.length - 4} Kategori lainnya
                         </p>
                       )}
                     </div>
                   </div>
+
+                  {/* List Detail Porsi Stok per Kategori */}
+                  <div className="bg-[#161c2d]/60 backdrop-blur-md border border-white/5 p-5 rounded-2xl space-y-4">
+                    <h3 className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-2">Porsi Stok per Kategori</h3>
+                    
+                    <div className="space-y-4 max-h-[220px] overflow-y-auto pr-1">
+                      {categoryStockData.map((item, index) => {
+                        const percentage = totalAllStock > 0 ? Math.round((item.stock / totalAllStock) * 100) : 0;
+                        
+                        // Inline color functions
+                        const getGradientClass = (idx: number) => {
+                          if (idx === 0) return 'from-indigo-500 to-purple-500';
+                          if (idx === 1) return 'from-purple-500 to-pink-500';
+                          if (idx === 2) return 'from-pink-500 to-rose-400';
+                          return 'from-slate-600 to-slate-500';
+                        };
+
+                        const getDotColorClass = (idx: number) => {
+                          if (idx === 0) return 'bg-indigo-500';
+                          if (idx === 1) return 'bg-purple-500';
+                          if (idx === 2) return 'bg-pink-500';
+                          return 'bg-slate-500';
+                        };
+
+                        return (
+                          <div key={index} className="space-y-1">
+                            <div className="flex justify-between text-xs sm:text-sm">
+                              <span className="flex items-center gap-2 text-slate-300 font-medium">
+                                <span className={`w-2.5 h-2.5 rounded-full ${getDotColorClass(index)}`}></span> 
+                                <span className="truncate max-w-[130px] sm:max-w-[150px]">{item.name}</span>
+                              </span>
+                              <span className="font-semibold text-white font-mono">
+                                {item.stock.toLocaleString('id-ID')}{' '}
+                                <span className="text-[10px] text-slate-400 font-normal">({percentage}%)</span>
+                              </span>
+                            </div>
+                            <div className="w-full bg-slate-800/60 h-2 rounded-full overflow-hidden">
+                              <div 
+                                className={`bg-gradient-to-r ${getGradientClass(index)} h-full rounded-full transition-all duration-500`} 
+                                style={{ width: `${percentage}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Bento Grid: Analisis Stok Menipis & Kadaluarsa */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+            
+            {/* Panel 1: Analisis Stok Menipis */}
+            <div className="bg-[#131a2a]/60 backdrop-blur-md border border-white/5 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-2 pb-4 border-b border-white/5">
+                  <div className="p-2.5 bg-rose-500/10 rounded-xl text-rose-400">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white tracking-tight">Analisis Stok Menipis ({lowStockProducts.length})</h3>
+                    <p className="text-[11px] text-slate-400">Barang dengan stok di bawah limit minimum peringatan</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3.5 mt-4 max-h-[250px] overflow-y-auto pr-1">
+                  {lowStockProducts.map((p) => (
+                    <div key={p.id} className="flex justify-between items-center p-3 rounded-xl bg-slate-900/40 border border-white/5 hover:border-rose-500/20 transition-all">
+                      <div className="min-w-0 flex-1 pr-3">
+                        <p className="text-xs font-semibold text-white truncate">{p.name}</p>
+                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">SKU: {p.code} • Kategori: {p.category}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs font-bold text-rose-400 font-mono block">
+                          {p.stock} <span className="text-[10px] text-slate-500 font-normal">/ {p.minStock} {p.satuanJual || 'Pcs'}</span>
+                        </span>
+                        <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-1.5 py-0.5 rounded-md font-bold mt-1 inline-block uppercase tracking-wider">
+                          Isi Ulang
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {lowStockProducts.length === 0 && (
+                    <div className="py-12 text-center text-xs text-slate-500">
+                      👍 Semua stok barang dalam keadaan aman & cukup!
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Panel 2: Analisis Produk Kadaluarsa */}
+            <div className="bg-[#131a2a]/60 backdrop-blur-md border border-white/5 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-2 pb-4 border-b border-white/5">
+                  <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-400">
+                    <BellRing className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white tracking-tight">Analisis Kadaluarsa ({nearExpiryProducts.length})</h3>
+                    <p className="text-[11px] text-slate-400">Barang mendekati tanggal kadaluarsa dalam 30 hari</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3.5 mt-4 max-h-[250px] overflow-y-auto pr-1">
+                  {nearExpiryProducts.map((p) => {
+                    const daysLeft = p.expiryDate 
+                      ? Math.ceil((new Date(p.expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                      : 0;
+
+                    return (
+                      <div key={p.id} className="flex justify-between items-center p-3 rounded-xl bg-slate-900/40 border border-white/5 hover:border-amber-500/20 transition-all">
+                        <div className="min-w-0 flex-1 pr-3">
+                          <p className="text-xs font-semibold text-white truncate">{p.name}</p>
+                          <p className="text-[10px] text-slate-500 font-mono mt-0.5">Exp: {p.expiryDate ? formatDate(p.expiryDate) : '-'}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-xs font-bold font-mono block ${daysLeft <= 7 ? 'text-rose-400' : 'text-amber-400'}`}>
+                            {daysLeft <= 0 ? 'Kedaluwarsa' : `${daysLeft} Hari Lagi`}
+                          </span>
+                          <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded-md font-bold mt-1 inline-block uppercase tracking-wider">
+                            Diskon / Retur
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {nearExpiryProducts.length === 0 && (
+                    <div className="py-12 text-center text-xs text-slate-500">
+                      ✨ Tidak ada produk yang mendekati tanggal kadaluarsa.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       ) : (
         /* TRANSACTION HISTORY LOG LIST */
         <div className="space-y-4">
-          <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
-            {/* Search filter in histories */}
-            <div className="relative flex-1 max-w-md w-full">
+          {/* BAGIAN ATAS: SEARCH BAR & COUNTER DATA */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            {/* Input Pencarian Modern */}
+            <div className="relative w-full sm:max-w-sm">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                <Search className="w-5 h-5" />
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
               </span>
               <input
                 id="tx_history_search"
@@ -572,64 +795,72 @@ export default function AnalitikTab({
                 placeholder="Cari nomor faktur invoice atau nama pelanggan..."
                 value={historySearch}
                 onChange={(e) => setHistorySearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-lg text-slate-950 placeholder-slate-400 focus:outline-none focus:border-slate-900 transition-colors text-sm"
+                className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-2.5 pl-9 pr-4 text-xs font-medium outline-none transition-all"
               />
             </div>
-            
-            <div className="text-xs text-slate-500 font-semibold">
-              Menampilkan {filteredHistories.length} transaksi penjualan
-            </div>
+            {/* Total Transaksi Badge */}
+            <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl">
+              Menampilkan <span className="text-blue-600 font-bold">{filteredHistories.length}</span> transaksi penjualan
+            </span>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          {/* BAGIAN UTAMA: TABEL TRANSAKSI MODERN */}
+          <div className="bg-white rounded-2xl shadow-xl shadow-slate-100 border border-slate-100 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider font-mono">
-                    <th className="p-4">Faktur Invoice</th>
-                    <th className="p-4">Waktu Transaksi</th>
-                    <th className="p-4">Pelanggan</th>
-                    <th className="p-4 text-center">Metode</th>
-                    <th className="p-4 text-right">Total Transaksi</th>
-                    <th className="p-4 text-right">Estimasi Profit</th>
-                    <th className="p-4 text-center">Aksi</th>
+                  <tr className="bg-slate-50/70 border-b border-slate-100 text-[10px] font-bold text-slate-400 tracking-wider uppercase">
+                    <th className="py-4 px-5">Faktur Invoice</th>
+                    <th className="py-4 px-4">Waktu Transaksi</th>
+                    <th className="py-4 px-4">Pelanggan</th>
+                    <th className="py-4 px-4 text-center">Metode</th>
+                    <th className="py-4 px-4 text-right">Total Transaksi</th>
+                    <th className="py-4 px-4 text-right">Estimasi Profit</th>
+                    <th className="py-4 px-5 text-center">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
+                <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
                   {filteredHistories.map((t) => {
+                    const txDate = new Date(t.date);
+                    const formattedDate = txDate.toLocaleDateString('id-ID');
+                    const formattedTime = txDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
                     return (
                       <tr 
                         id={`tx_row_${t.id}`}
                         key={t.id} 
-                        className="hover:bg-slate-50 transition-colors text-slate-700"
+                        className="hover:bg-slate-50/50 transition-colors"
                       >
-                        <td className="p-4 font-mono text-xs font-bold text-slate-900">{t.invoiceNumber}</td>
-                        <td className="p-4 text-xs font-mono text-slate-500">{new Date(t.date).toLocaleString('id-ID')}</td>
-                        <td className="p-4">
-                          <span className="font-semibold uppercase text-xs text-slate-800">
-                            {t.customerName || 'Umum'}
-                          </span>
+                        <td className="py-3.5 px-5 font-mono font-bold text-slate-900">{t.invoiceNumber}</td>
+                        <td className="py-3.5 px-4 text-slate-400 font-normal">
+                          {formattedDate}, <span className="text-slate-600">{formattedTime}</span>
                         </td>
-                        <td className="p-4 text-center">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                        <td className="py-3.5 px-4 text-slate-500 uppercase">
+                          {t.customerName || 'UMUM'}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
                             t.paymentType === 'CASH' 
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                              ? 'text-emerald-600 bg-emerald-50 border-emerald-100' 
                               : t.paymentType === 'QRIS'
-                                ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
-                                : 'bg-amber-50 text-amber-800 border-amber-200'
+                                ? 'text-indigo-600 bg-indigo-50 border-indigo-100'
+                                : 'text-amber-600 bg-amber-50 border-amber-100'
                           }`}>
                             {t.paymentType}
                           </span>
                         </td>
-                        <td className="p-4 text-right font-mono font-bold text-slate-900">{formatPrice(t.total)}</td>
-                        <td className="p-4 text-right font-mono text-xs text-emerald-700 font-bold">{formatPrice(t.totalProfit)}</td>
-                        <td className="p-4 text-center">
+                        <td className="py-3.5 px-4 text-right font-semibold text-slate-900">{formatPrice(t.total)}</td>
+                        <td className="py-3.5 px-4 text-right font-semibold text-emerald-600">+ {formatPrice(t.totalProfit)}</td>
+                        <td className="py-3.5 px-5 text-center">
                           <button
                             id={`view_tx_detail_${t.id}`}
                             onClick={() => setSelectedTxDetail(t)}
-                            className="px-3 py-1 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 text-xs font-bold rounded-lg border border-slate-200 flex items-center gap-1 mx-auto transition-colors"
+                            className="border border-slate-250 hover:border-slate-350 hover:bg-slate-50 text-slate-700 text-[11px] font-extrabold py-1.5 px-3 rounded-lg shadow-sm transition-all inline-flex items-center gap-1.5 active:scale-[0.95] cursor-pointer"
                           >
-                            <FileText className="w-3.5 h-3.5" />
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
                             <span>Detail</span>
                           </button>
                         </td>
@@ -654,149 +885,157 @@ export default function AnalitikTab({
       {/* Invoice Detail Modal Popup */}
       {selectedTxDetail && (
         <div id="tx_detail_modal" className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white text-slate-900 w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden border border-slate-200 animate-scaleIn">
-            <div className="bg-slate-900 text-white p-4 flex items-center justify-between">
+          <div className="bg-white text-slate-950 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-100 flex flex-col animate-scaleIn">
+            
+            {/* Header Modal Premium */}
+            <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold">Detail Faktur Invoice</h3>
-                <span className="text-[10px] text-slate-400 font-mono">{selectedTxDetail.invoiceNumber}</span>
+                <h2 className="text-sm font-bold tracking-tight">Detail Faktur Invoice</h2>
+                <p className="text-[11px] text-slate-400 font-mono mt-0.5">{selectedTxDetail.invoiceNumber}</p>
               </div>
               <button
                 id="close_tx_detail_modal"
                 onClick={() => setSelectedTxDetail(null)}
-                className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors"
+                className="text-slate-400 hover:text-white p-1.5 active:scale-90 rounded-lg transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Receipt Printable Segment */}
-            <div id="printable_receipt" className="p-5 font-mono text-xs space-y-4 max-h-[55vh] overflow-y-auto">
-              <div className="text-center space-y-1">
-                <h4 className="text-sm font-bold uppercase tracking-wide">{shopSettings.shopName}</h4>
-                <p className="text-[10px] text-slate-500 leading-tight">{shopSettings.shopAddress}</p>
-                <p className="text-[10px] text-slate-500">Telp: {shopSettings.shopPhone}</p>
-                <div className="border-b border-dashed border-slate-300 pt-2" />
-              </div>
+            {/* Area Tampilan Struk Fisik */}
+            <div className="p-5 bg-slate-50/50 border-b border-slate-100 flex-1 overflow-y-auto max-h-[55vh]">
+              <div id="printable_receipt" className="bg-white rounded-xl border border-slate-200/60 p-5 shadow-sm space-y-4">
+                
+                {/* Identitas Toko */}
+                <div className="text-center pb-3 border-b border-dashed border-slate-200">
+                  <h3 className="text-sm font-extrabold text-slate-900 tracking-wide uppercase">{shopSettings.shopName}</h3>
+                  <p className="text-[10px] text-slate-400 mt-1">{shopSettings.shopAddress}</p>
+                  <p className="text-[10px] text-slate-400">Telp: {shopSettings.shopPhone}</p>
+                </div>
 
-              {/* Meta details */}
-              <div className="space-y-0.5 text-[11px] text-slate-600">
-                <div className="flex justify-between">
-                  <span>Waktu:</span>
-                  <span className="font-bold">{new Date(selectedTxDetail.date).toLocaleString('id-ID')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Metode:</span>
-                  <span className="font-bold">{selectedTxDetail.paymentType}</span>
-                </div>
-                {selectedTxDetail.customerName && (
+                {/* Meta Transaksi (Waktu & Metode) */}
+                <div className="text-xs space-y-1 text-slate-500 pb-3 border-b border-dashed border-slate-200">
                   <div className="flex justify-between">
-                    <span>Pelanggan:</span>
-                    <span className="font-bold uppercase">{selectedTxDetail.customerName}</span>
+                    <span>Waktu</span>
+                    <span className="font-medium text-slate-800">{new Date(selectedTxDetail.date).toLocaleString('id-ID')}</span>
                   </div>
-                )}
-                <div className="border-b border-dashed border-slate-300 pt-2" />
-              </div>
-
-              {/* Table items */}
-              <div className="space-y-2 text-[11px]">
-                {selectedTxDetail.items.map((item, index) => (
-                  <div key={index} className="flex justify-between items-start gap-2">
-                    <div className="flex-1">
-                      <div>{item.name}</div>
-                      <div className="text-slate-500">{item.quantity} x {item.price.toLocaleString('id-ID')}</div>
+                  <div className="flex justify-between items-center">
+                    <span>Metode</span>
+                    <span className="font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">{selectedTxDetail.paymentType}</span>
+                  </div>
+                  {selectedTxDetail.customerName && (
+                    <div className="flex justify-between">
+                      <span>Pelanggan</span>
+                      <span className="font-bold text-slate-900 uppercase">{selectedTxDetail.customerName}</span>
                     </div>
-                    <div className="font-bold">{(item.subtotal).toLocaleString('id-ID')}</div>
-                  </div>
-                ))}
-                <div className="border-b border-dashed border-slate-300 pt-2" />
-              </div>
-
-              {/* Summary calculations */}
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span className="font-bold font-mono">{selectedTxDetail.total.toLocaleString('id-ID')}</span>
+                  )}
                 </div>
-                {selectedTxDetail.paymentType === 'CASH' && (
-                  <>
-                    <div className="flex justify-between text-slate-600">
-                      <span>Tunai Dibayar:</span>
-                      <span className="font-mono">{selectedTxDetail.amountPaid.toLocaleString('id-ID')}</span>
+
+                {/* Daftar Item Belanja */}
+                <div className="text-xs space-y-2 py-1">
+                  {selectedTxDetail.items.map((item, index) => (
+                    <div key={index} className="flex justify-between items-start gap-2">
+                      <div>
+                        <p className="font-semibold text-slate-800">{item.name}</p>
+                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">{item.quantity} x {item.price.toLocaleString('id-ID')}</p>
+                      </div>
+                      <span className="font-bold text-slate-900 font-mono">{(item.subtotal).toLocaleString('id-ID')}</span>
                     </div>
-                    <div className="flex justify-between text-emerald-600 font-bold border-t border-dotted border-slate-200 pt-1">
-                      <span>Kembalian:</span>
-                      <span className="font-mono">{selectedTxDetail.change.toLocaleString('id-ID')}</span>
+                  ))}
+                </div>
+
+                {/* Rincian Total Pembayaran */}
+                <div className="pt-3 border-t border-dashed border-slate-200 space-y-1.5 text-xs">
+                  <div className="flex justify-between text-slate-500">
+                    <span>Subtotal</span>
+                    <span className="font-semibold text-slate-800 font-mono">{selectedTxDetail.total.toLocaleString('id-ID')}</span>
+                  </div>
+                  {selectedTxDetail.paymentType === 'CASH' && (
+                    <>
+                      <div className="flex justify-between text-slate-500">
+                        <span>Tunai Dibayar</span>
+                        <span className="font-semibold text-slate-800 font-mono">{selectedTxDetail.amountPaid.toLocaleString('id-ID')}</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-emerald-600 bg-emerald-50 p-2 rounded-lg mt-1">
+                        <span>Kembalian</span>
+                        <span className="font-mono">{selectedTxDetail.change.toLocaleString('id-ID')}</span>
+                      </div>
+                    </>
+                  )}
+                  {selectedTxDetail.paymentType === 'QRIS' && (
+                    <div className="flex justify-between font-bold text-emerald-600 bg-emerald-50 p-2 rounded-lg mt-1">
+                      <span>Status QRIS</span>
+                      <span>LUNAS</span>
                     </div>
-                  </>
-                )}
-                {selectedTxDetail.paymentType === 'QRIS' && (
-                  <div className="flex justify-between text-emerald-600 font-bold">
-                    <span>Status QRIS:</span>
-                    <span>LUNAS</span>
-                  </div>
-                )}
-                {selectedTxDetail.paymentType === 'DEBT' && (
-                  <div className="flex justify-between text-amber-600 font-bold">
-                    <span>Sisa Utang:</span>
-                    <span className="font-mono">{selectedTxDetail.total.toLocaleString('id-ID')}</span>
-                  </div>
-                )}
+                  )}
+                  {selectedTxDetail.paymentType === 'DEBT' && (
+                    <div className="flex justify-between font-bold text-amber-600 bg-amber-50 p-2 rounded-lg mt-1">
+                      <span>Sisa Utang</span>
+                      <span className="font-mono">{selectedTxDetail.total.toLocaleString('id-ID')}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Kaki Struk (Footer Message) */}
+                <div className="text-center pt-3 border-t border-dashed border-slate-200 space-y-1">
+                  <p className="text-[10px] text-slate-400 leading-normal whitespace-pre-line">{shopSettings.receiptFooter}</p>
+                  <p className="text-[9px] font-bold tracking-widest text-slate-300 uppercase mt-2">POWERED BY KASIR PINTAR OFFLINE</p>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Footer Modal: Tombol Operasional & Cetak */}
+            <div className="p-4 bg-white space-y-3">
+              {/* Grup Tombol Salin & Unduh Sekunder */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  id="copy_invoice_detail_text_btn"
+                  onClick={() => copyTextReceipt(selectedTxDetail)}
+                  className="border border-slate-250 hover:bg-slate-50 text-slate-700 text-xs font-bold py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
+                >
+                  {copiedReceipt ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      <span className="text-emerald-700 font-extrabold">Berhasil Disalin</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                      <span>Salin Struk</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  id="download_invoice_detail_txt_btn"
+                  onClick={() => downloadTextReceipt(selectedTxDetail)}
+                  className="border border-slate-250 hover:bg-slate-50 text-slate-700 text-xs font-bold py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
+                >
+                  <Download className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                  <span>Unduh TXT</span>
+                </button>
               </div>
 
-              <div className="text-center text-[10px] text-slate-500 pt-2">
-                <div className="border-t border-dashed border-slate-300 pt-2" />
-                <p className="whitespace-pre-line">{shopSettings.receiptFooter}</p>
-                <p className="font-bold text-[9px] text-slate-400 mt-1">POWERED BY KASIR PINTAR OFFLINE</p>
+              {/* Tombol Utama Cetak & Tutup */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  id="print_tx_detail_btn"
+                  onClick={() => window.print()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold py-3 px-4 rounded-xl shadow-md shadow-blue-500/10 hover:shadow-lg transition-all flex items-center justify-center gap-2 order-last sm:order-first active:scale-[0.98] cursor-pointer"
+                >
+                  <Printer className="h-4 w-4 text-white shrink-0" />
+                  <span>Cetak Nota</span>
+                </button>
+                <button
+                  id="dismiss_tx_detail_modal"
+                  onClick={() => setSelectedTxDetail(null)}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold py-3 px-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-all active:scale-[0.98] cursor-pointer"
+                >
+                  Tutup
+                </button>
               </div>
             </div>
 
-            {/* Quick Actions (Copy & Download Plain Text Struk) */}
-            <div className="px-4 py-2 bg-slate-100 border-t border-slate-200 flex gap-2 justify-center items-center">
-              <button
-                id="copy_invoice_detail_text_btn"
-                onClick={() => copyTextReceipt(selectedTxDetail)}
-                className="flex-1 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-250 font-bold rounded-lg text-[10px] flex items-center justify-center gap-1 transition-all shadow-sm cursor-pointer"
-              >
-                {copiedReceipt ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="text-emerald-700">Berhasil Disalin</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Salin Struk</span>
-                  </>
-                )}
-              </button>
-              <button
-                id="download_invoice_detail_txt_btn"
-                onClick={() => downloadTextReceipt(selectedTxDetail)}
-                className="flex-1 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-250 font-bold rounded-lg text-[10px] flex items-center justify-center gap-1 transition-all shadow-sm cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5 text-slate-500" />
-                <span>Unduh File TXT</span>
-              </button>
-            </div>
-
-            {/* Print and Actions */}
-            <div className="p-4 bg-white border-t border-slate-200 flex gap-2">
-              <button
-                id="print_tx_detail_btn"
-                onClick={() => window.print()}
-                className="flex-1 py-2.5 bg-slate-950 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer"
-              >
-                <Printer className="w-4 h-4 text-emerald-400" />
-                <span>Cetak Nota</span>
-              </button>
-              <button
-                id="dismiss_tx_detail_modal"
-                onClick={() => setSelectedTxDetail(null)}
-                className="flex-1 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs flex items-center justify-center transition-colors shadow-sm cursor-pointer"
-              >
-                Tutup
-              </button>
-            </div>
           </div>
         </div>
       )}

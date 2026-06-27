@@ -115,14 +115,14 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
         </div>
 
         {/* Status Filters */}
-        <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 w-full md:w-auto">
+        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 w-full md:w-auto">
           <button
             id="debt_filter_unpaid"
             onClick={() => setStatusFilter('UNPAID_PARTIAL')}
-            className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            className={`flex-1 md:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-[0.98] cursor-pointer ${
               statusFilter === 'UNPAID_PARTIAL'
-                ? 'bg-slate-950 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-slate-900 text-white shadow-sm border border-transparent'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
             Belum Lunas
@@ -130,10 +130,10 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
           <button
             id="debt_filter_paid"
             onClick={() => setStatusFilter('PAID')}
-            className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            className={`flex-1 md:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-[0.98] cursor-pointer ${
               statusFilter === 'PAID'
-                ? 'bg-slate-950 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-slate-900 text-white shadow-sm border border-transparent'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
             Sudah Lunas
@@ -141,10 +141,10 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
           <button
             id="debt_filter_all"
             onClick={() => setStatusFilter('ALL')}
-            className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            className={`flex-1 md:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-[0.98] cursor-pointer ${
               statusFilter === 'ALL'
-                ? 'bg-slate-950 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-slate-900 text-white shadow-sm border border-transparent'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
             Semua
@@ -219,13 +219,13 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
                       <button
                         id={`pay_debt_btn_${d.id}`}
                         onClick={() => handleOpenPaymentModal(d)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 mx-auto border ${
+                        className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 mx-auto border cursor-pointer active:scale-[0.96] focus:ring-2 focus:ring-slate-500/10 ${
                           isPaid 
-                            ? 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100' 
-                            : 'bg-slate-900 hover:bg-slate-800 text-white border-transparent shadow-sm active:scale-95'
+                            ? 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100/80' 
+                            : 'bg-slate-950 hover:bg-slate-800 text-white border-transparent shadow-sm shadow-slate-950/5 hover:shadow-md'
                         }`}
                       >
-                        {isPaid ? <History className="w-3.5 h-3.5" /> : <DollarSign className="w-3.5 h-3.5" />}
+                        {isPaid ? <History className="w-3.5 h-3.5 shrink-0 text-slate-500" /> : <DollarSign className="w-3.5 h-3.5 shrink-0 text-emerald-400" />}
                         <span>{isPaid ? 'Riwayat' : 'Bayar'}</span>
                       </button>
                     </td>
@@ -257,7 +257,7 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
               <button
                 id="close_debt_modal"
                 onClick={() => setSelectedDebt(null)}
-                className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors"
+                className="p-1.5 hover:bg-slate-800/80 active:scale-95 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -285,13 +285,13 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
               </div>
 
               {/* Installment History vs Pay Toggle */}
-              <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+              <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
                 <button
                   id="tab_pay_debt"
                   type="button"
                   onClick={() => setShowHistory(false)}
-                  className={`flex-1 py-1.5 rounded text-xs font-bold transition-all ${
-                    !showHistory ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500'
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-[0.98] ${
+                    !showHistory ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
                   Bayar Cicilan
@@ -300,8 +300,8 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
                   id="tab_history_debt"
                   type="button"
                   onClick={() => setShowHistory(true)}
-                  className={`flex-1 py-1.5 rounded text-xs font-bold transition-all ${
-                    showHistory ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500'
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-[0.98] ${
+                    showHistory ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
                   Riwayat Cicilan ({selectedDebt.payments.length})
@@ -345,7 +345,7 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
                         id="shortcut_debt_pay_all"
                         type="button"
                         onClick={() => setPaymentAmount(selectedDebt.remainingDebt.toLocaleString('id-ID'))}
-                        className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-950 text-xs font-bold border border-slate-250 rounded-lg flex-1 transition-colors"
+                        className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 active:scale-[0.98] text-slate-950 text-xs font-bold border border-slate-250 rounded-lg flex-1 transition-all cursor-pointer"
                       >
                         Bayar Lunas ({formatPrice(selectedDebt.remainingDebt)})
                       </button>
@@ -354,7 +354,7 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
                           id="shortcut_debt_pay_half"
                           type="button"
                           onClick={() => setPaymentAmount((selectedDebt.remainingDebt / 2).toLocaleString('id-ID'))}
-                          className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-250 rounded-lg flex-1 transition-colors"
+                          className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 active:scale-[0.98] text-slate-700 text-xs font-semibold border border-slate-250 rounded-lg flex-1 transition-all cursor-pointer"
                         >
                           Bayar Setengah
                         </button>
@@ -364,9 +364,9 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
                     <button
                       id="submit_debt_payment"
                       type="submit"
-                      className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-200 shrink-0" />
                       <span>Catat Pembayaran</span>
                     </button>
                   </form>

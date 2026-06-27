@@ -106,7 +106,9 @@ export default function StokTab({
     stock: 0,
     minStock: 5,
     satuanJual: 'Pcs',
-    expiryDate: ''
+    expiryDate: '',
+    entryDate: '',
+    lastSoldDate: ''
   });
 
   const categories = ['Semua', ...Array.from(new Set([...kategoriPilihan, ...products.map(p => p.category)])).filter(Boolean)];
@@ -121,6 +123,7 @@ export default function StokTab({
   });
 
   const handleOpenAddModal = () => {
+    const todayStr = new Date().toISOString().split('T')[0];
     setFormData({
       id: 'prod_' + Date.now(),
       code: '',
@@ -131,7 +134,9 @@ export default function StokTab({
       stock: 0,
       minStock: 5,
       satuanJual: 'Pcs',
-      expiryDate: ''
+      expiryDate: '',
+      entryDate: todayStr,
+      lastSoldDate: ''
     });
     setShowAddModal(true);
   };
@@ -147,7 +152,9 @@ export default function StokTab({
       stock: p.stock,
       minStock: p.minStock,
       satuanJual: p.satuanJual || 'Pcs',
-      expiryDate: p.expiryDate || ''
+      expiryDate: p.expiryDate || '',
+      entryDate: p.entryDate || new Date().toISOString().split('T')[0],
+      lastSoldDate: p.lastSoldDate || ''
     });
     setShowEditModal(true);
   };
@@ -179,7 +186,9 @@ export default function StokTab({
       stock: Number(formData.stock),
       minStock: Number(formData.minStock),
       satuanJual: formData.satuanJual,
-      expiryDate: formData.expiryDate
+      expiryDate: formData.expiryDate,
+      entryDate: formData.entryDate || new Date().toISOString().split('T')[0],
+      lastSoldDate: formData.lastSoldDate || undefined
     };
 
     const executeSave = async () => {
@@ -349,6 +358,17 @@ export default function StokTab({
     return shopSettings.currencySymbol + ' ' + num.toLocaleString('id-ID');
   };
 
+  const formatDateIndo = (dateStr?: string) => {
+    if (!dateStr) return '-';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
   return (
     <div className="space-y-4">
 
@@ -390,30 +410,30 @@ export default function StokTab({
           <button
             id="filter_low_stock_btn"
             onClick={() => setFilterLowStock(!filterLowStock)}
-            className={`px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer ${
               filterLowStock 
-                ? 'bg-amber-100 text-amber-900 font-bold border border-amber-300 shadow-sm' 
-                : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
+                ? 'bg-amber-500 hover:bg-amber-600 text-white font-bold border border-transparent shadow-md shadow-amber-500/10' 
+                : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-250 hover:border-slate-350 shadow-sm'
             }`}
           >
-            <AlertTriangle className="w-4 h-4 text-amber-600" />
+            <AlertTriangle className={`w-4 h-4 shrink-0 ${filterLowStock ? 'text-amber-100' : 'text-amber-500'}`} />
             <span>Stok Rendah</span>
           </button>
 
           <button
             id="export_excel_btn"
             onClick={handleExportExcel}
-            className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
+            className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 active:scale-[0.98] text-emerald-800 text-xs font-extrabold border border-emerald-250 rounded-xl flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
           >
-            <Download className="w-4 h-4 text-emerald-600" />
+            <Download className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>Export Excel</span>
           </button>
 
           <label
             id="import_excel_label"
-            className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-bold border border-indigo-200 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+            className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 active:scale-[0.98] text-indigo-800 text-xs font-extrabold border border-indigo-250 rounded-xl flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
           >
-            <Upload className="w-4 h-4 text-indigo-600" />
+            <Upload className="w-4 h-4 text-indigo-600 shrink-0" />
             <span>Import Excel</span>
             <input
               ref={fileInputRef}
@@ -427,9 +447,9 @@ export default function StokTab({
           <button
             id="add_new_product_btn"
             onClick={handleOpenAddModal}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
+            className="px-4 py-2 bg-slate-950 hover:bg-slate-800 active:scale-[0.98] text-white text-xs font-extrabold rounded-xl flex items-center gap-1.5 transition-all shadow-md shadow-slate-950/5 cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 shrink-0" />
             <span>Tambah Barang</span>
           </button>
         </div>
@@ -438,7 +458,7 @@ export default function StokTab({
       {/* Stock Inventory Table View */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider font-mono">
                 <th className="p-4">SKU / Kode</th>
@@ -447,6 +467,7 @@ export default function StokTab({
                 <th className="p-4 text-right">Harga Beli</th>
                 <th className="p-4 text-right">Harga Jual</th>
                 <th className="p-4 text-center">Stok</th>
+                <th className="p-4 text-center">Masuk / Keluar</th>
                 <th className="p-4 text-right">Margin / Profit</th>
                 <th className="p-4 text-center">Kadaluarsa</th>
                 <th className="p-4 text-center">Aksi</th>
@@ -509,6 +530,28 @@ export default function StokTab({
                         </span>
                       </div>
                     </td>
+                    <td className="p-4 text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="flex items-center gap-1.5 justify-center">
+                          <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[9px] font-extrabold px-1.5 py-0.5 rounded-md uppercase">
+                            Masuk
+                          </span>
+                          <span className="font-mono text-xs text-slate-700">{formatDateIndo(p.entryDate)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 justify-center">
+                          <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md uppercase border ${
+                            p.lastSoldDate 
+                              ? 'bg-orange-50 text-orange-700 border-orange-200' 
+                              : 'bg-slate-50 text-slate-400 border-slate-200'
+                          }`}>
+                            Keluar
+                          </span>
+                          <span className="font-mono text-xs text-slate-500">
+                            {p.lastSoldDate ? formatDateIndo(p.lastSoldDate) : '-'}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
                     <td className="p-4 text-right font-mono text-xs">
                       <div className="text-slate-900 font-bold">{formatPrice(margin)}</div>
                       <div className="text-[10px] text-slate-400">Margin: {profitPercent}%</div>
@@ -550,7 +593,7 @@ export default function StokTab({
                         <button
                           id={`edit_prod_${p.id}`}
                           onClick={() => handleOpenEditModal(p)}
-                          className="p-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 rounded transition-colors"
+                          className="p-1.5 bg-slate-50 hover:bg-slate-100 active:scale-90 text-slate-600 hover:text-slate-900 border border-slate-250 hover:border-slate-350 rounded-lg transition-all cursor-pointer"
                           title="Edit Barang"
                         >
                           <Edit2 className="w-4 h-4" />
@@ -558,7 +601,7 @@ export default function StokTab({
                         <button
                           id={`delete_prod_${p.id}`}
                           onClick={() => handleDelete(p)}
-                          className="p-1.5 bg-slate-50 hover:bg-red-50 text-slate-600 hover:text-red-600 border border-slate-200 hover:border-red-200 rounded transition-colors"
+                          className="p-1.5 bg-slate-50 hover:bg-rose-50 active:scale-90 text-slate-600 hover:text-rose-600 border border-slate-250 hover:border-rose-250 rounded-lg transition-all cursor-pointer"
                           title="Hapus Barang"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -571,7 +614,7 @@ export default function StokTab({
 
               {filteredProducts.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-slate-500">
+                  <td colSpan={10} className="p-8 text-center text-slate-500">
                     Tidak ada data barang yang sesuai dengan filter pencarian.
                   </td>
                 </tr>
@@ -584,111 +627,118 @@ export default function StokTab({
       {/* Add / Edit Product Modals */}
       {(showAddModal || showEditModal) && (
         <div id="product_modal_popup" className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 text-slate-900 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-scaleIn">
-            <div className="bg-slate-950 p-5 border-b border-slate-800 flex items-center justify-between text-white">
-              <h3 className="text-base font-bold flex items-center gap-2">
-                <PackagePlus className="w-5 h-5 text-emerald-400" />
-                <span>{showAddModal ? 'Tambah Barang Baru' : 'Edit Detail Barang'}</span>
-              </h3>
+          
+          {/* Container Modal Box (Compact & Clean Layout) */}
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col animate-scaleIn">
+            
+            {/* Header Modal Premium */}
+            <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
+                  <PackagePlus className="h-5 w-5" />
+                </div>
+                <h2 className="text-sm font-bold tracking-tight">
+                  {showAddModal ? 'Tambah Barang Baru' : 'Edit Detail Barang'}
+                </h2>
+              </div>
               <button
                 id="close_product_modal"
                 onClick={() => {
                   setShowAddModal(false);
                   setShowEditModal(false);
                 }}
-                className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors"
+                className="text-slate-400 hover:text-white p-1.5 active:scale-90 rounded-lg transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleFormSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                
-                {/* Product Code SKU Barcode */}
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wider">SKU / Kode Barcode *</label>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                        <Barcode className="w-4 h-4" />
-                      </span>
-                      <input
-                        id="form_prod_code"
-                        type="text"
-                        required
-                        placeholder="Scan atau ketik kode barcode..."
-                        value={formData.code}
-                        onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
-                        className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900"
-                      />
-                    </div>
-                    {showAddModal && (
-                      <button
-                        id="generate_barcode_btn"
-                        type="button"
-                        onClick={handleGenerateBarcode}
-                        className="px-3 bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 shadow-sm"
-                        title="Buat SKU Otomatis"
-                      >
-                        <Sparkles className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Auto SKU</span>
-                      </button>
-                    )}
+            {/* Form Konten Utama */}
+            <form onSubmit={handleFormSubmit} className="p-5 space-y-4">
+              
+              {/* Baris 1: SKU / Barcode */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">SKU / Kode Barcode *</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                      <Barcode className="h-4 w-4" />
+                    </span>
+                    <input
+                      id="form_prod_code"
+                      type="text"
+                      required
+                      placeholder="Scan atau ketik kode barcode..."
+                      value={formData.code}
+                      onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
+                      className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-2.5 pl-9 pr-3 text-xs font-medium outline-none transition-all"
+                    />
                   </div>
+                  {showAddModal && (
+                    <button
+                      id="generate_barcode_btn"
+                      type="button"
+                      onClick={handleGenerateBarcode}
+                      className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold px-3 py-2.5 rounded-xl transition-all flex items-center gap-1.5 active:scale-[0.98] cursor-pointer"
+                      title="Buat SKU Otomatis"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-slate-400" />
+                      <span>Auto SKU</span>
+                    </button>
+                  )}
                 </div>
+              </div>
 
-                {/* Name */}
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wider">Nama Barang *</label>
-                  <input
-                    id="form_prod_name"
-                    type="text"
-                    required
-                    placeholder="Contoh: Kopi Bubuk Toraja 250gr"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900"
-                  />
-                </div>
+              {/* Baris 2: Nama Barang */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Nama Barang *</label>
+                <input
+                  id="form_prod_name"
+                  type="text"
+                  required
+                  placeholder="Contoh: Kopi Bubuk Toraja 250gr"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-2.5 px-3 text-xs font-medium outline-none transition-all"
+                />
+              </div>
 
-                {/* Category */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wider">Kategori *</label>
+              {/* Baris 3: Grid Kategori & Satuan */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Kategori *</label>
                   <select
                     id="form_prod_category"
                     value={formData.category}
                     onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-slate-900 cursor-pointer"
+                    className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-2.5 px-3 text-xs font-medium outline-none transition-all appearance-none cursor-pointer"
                   >
                     {kategoriPilihan.map((kat) => (
                       <option key={kat} value={kat}>{kat}</option>
                     ))}
                   </select>
                 </div>
-
-                {/* Satuan Jual */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wider">Satuan Jual (Kasir) *</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Satuan Jual (Kasir) *</label>
                   <select
                     id="form_prod_satuan_jual"
                     value={formData.satuanJual}
                     onChange={(e) => setFormData(prev => ({ ...prev, satuanJual: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-slate-900 cursor-pointer"
+                    className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-2.5 px-3 text-xs font-medium outline-none transition-all appearance-none cursor-pointer"
                   >
                     {daftarSatuanJual.map((sat) => (
                       <option key={sat} value={sat}>{sat}</option>
                     ))}
                   </select>
                 </div>
+              </div>
 
-                {/* Purchase Price */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wider">Harga Beli *</label>
+              {/* Baris 4: Grid Harga Beli & Harga Jual */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Harga Beli *</label>
                   <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs font-bold">
-                      {shopSettings.currencySymbol}
-                    </span>
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-xs font-bold text-slate-400">Rp</span>
                     <input
                       id="form_prod_purchase"
                       type="text"
@@ -699,18 +749,14 @@ export default function StokTab({
                         const raw = e.target.value.replace(/\D/g, '');
                         setFormData(prev => ({ ...prev, purchasePrice: parseInt(raw, 10) || 0 }));
                       }}
-                      className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-slate-900 font-mono font-bold"
+                      className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-2.5 pl-8 pr-3 text-xs font-medium outline-none transition-all font-mono font-bold"
                     />
                   </div>
                 </div>
-
-                {/* Selling Price */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wider">Harga Jual *</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Harga Jual *</label>
                   <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs font-bold">
-                      {shopSettings.currencySymbol}
-                    </span>
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-xs font-bold text-slate-400">Rp</span>
                     <input
                       id="form_prod_price"
                       type="text"
@@ -721,14 +767,16 @@ export default function StokTab({
                         const raw = e.target.value.replace(/\D/g, '');
                         setFormData(prev => ({ ...prev, price: parseInt(raw, 10) || 0 }));
                       }}
-                      className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-slate-900 font-mono font-bold text-emerald-700"
+                      className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-2.5 pl-8 pr-3 text-xs font-medium outline-none transition-all font-mono font-bold text-emerald-700"
                     />
                   </div>
                 </div>
+              </div>
 
-                {/* Initial Stock */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wider">Jumlah Stok *</label>
+              {/* Baris 5: Grid Jumlah Stok & Limit Minimum */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Jumlah Stok *</label>
                   <input
                     id="form_prod_stock"
                     type="number"
@@ -737,13 +785,11 @@ export default function StokTab({
                     placeholder="0"
                     value={formData.stock}
                     onChange={(e) => setFormData(prev => ({ ...prev, stock: parseInt(e.target.value) || 0 }))}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-slate-900 font-mono"
+                    className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-2.5 px-3 text-xs font-medium outline-none transition-all font-mono"
                   />
                 </div>
-
-                {/* Min stock limit warning threshold */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wider">Limit Peringatan Minimum</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Limit Peringatan Minimum</label>
                   <input
                     id="form_prod_min"
                     type="number"
@@ -751,48 +797,43 @@ export default function StokTab({
                     placeholder="5"
                     value={formData.minStock}
                     onChange={(e) => setFormData(prev => ({ ...prev, minStock: parseInt(e.target.value) || 3 }))}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-slate-900 font-mono"
+                    className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-2.5 px-3 text-xs font-medium outline-none transition-all font-mono"
                   />
-                  <span className="text-[10px] text-slate-400 block mt-1 leading-tight">
-                    Notifikasi menyala jika stok berada di bawah batas ini.
-                  </span>
                 </div>
+              </div>
 
-                {/* Tanggal Kadaluarsa */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wider">Tanggal Kadaluarsa</label>
+              {/* Baris 6: Grid Tanggal Kadaluarsa & Estimasi Margin */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tanggal Kadaluarsa</label>
                   <input
                     id="form_prod_expiry"
                     type="date"
                     value={formData.expiryDate || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, expiryDate: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-slate-900 font-mono"
+                    className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-2 px-3 text-xs font-medium outline-none transition-all text-slate-500 cursor-pointer font-mono"
                   />
-                  <span className="text-[10px] text-slate-400 block mt-1 leading-tight">
-                    Kosongkan jika produk tidak memiliki tanggal kadaluarsa.
-                  </span>
                 </div>
-
-                {/* Calculated Profit helper */}
-                <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200 flex items-center justify-between">
-                  <div className="text-xs">
-                    <div className="text-slate-800 uppercase font-bold tracking-wide">Estimasi Margin Profit</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">Selisih harga jual dan beli</div>
+                
+                {/* Box Estimasi Margin Profit Premium */}
+                <div className="bg-emerald-50/60 border border-emerald-100 p-3 rounded-xl flex justify-between items-center h-[38px]">
+                  <div>
+                    <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Estimasi Margin</h4>
+                    <p className="text-[10px] text-slate-400 mt-0.5 leading-none">Selisih harga jual & beli</p>
                   </div>
-                  <div className="text-right font-mono">
-                    <div className="text-sm font-bold text-emerald-700">
+                  <div className="text-right">
+                    <span className="text-xs font-bold text-emerald-600 block">
                       {formatPrice(Math.max(0, formData.price - formData.purchasePrice))}
-                    </div>
-                    <div className="text-[10px] text-slate-500 font-semibold">
+                    </span>
+                    <span className="text-[9px] font-medium text-slate-400 block mt-0.5">
                       Profit: {formData.purchasePrice > 0 ? Math.round(((formData.price - formData.purchasePrice) / formData.purchasePrice) * 100) : 0}%
-                    </div>
+                    </span>
                   </div>
                 </div>
-
               </div>
 
-              {/* Submit Controls */}
-              <div className="border-t border-slate-150 pt-5 mt-6 flex justify-end gap-2.5">
+              {/* Footer Modal: Tombol Simpan & Batal */}
+              <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
                 <button
                   id="cancel_product_form"
                   type="button"
@@ -800,14 +841,14 @@ export default function StokTab({
                     setShowAddModal(false);
                     setShowEditModal(false);
                   }}
-                  className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold transition-colors"
+                  className="px-4 py-2 bg-slate-50 hover:bg-slate-100 active:scale-[0.98] text-slate-700 hover:text-slate-950 border border-slate-250 hover:border-slate-350 rounded-xl text-xs font-bold transition-all cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   id="submit_product_form"
                   type="submit"
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-850 text-white text-xs font-bold rounded-lg transition-all shadow-sm active:scale-95"
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white text-xs font-extrabold rounded-xl transition-all shadow-md shadow-indigo-500/10 hover:shadow-lg cursor-pointer"
                 >
                   Simpan Barang
                 </button>

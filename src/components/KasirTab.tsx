@@ -135,6 +135,8 @@ export default function KasirTab({
   const [activeInvoice, setActiveInvoice] = useState<Transaction | null>(null);
   const [copiedReceipt, setCopiedReceipt] = useState(false);
   const [receiptFormat, setReceiptFormat] = useState<'58mm' | '80mm'>('58mm');
+  const [localPrintError, setLocalPrintError] = useState<string | null>(null);
+  const [showLocalPrintError, setShowLocalPrintError] = useState(false);
 
   // Plain-Text receipt compiler for copy/download fallbacks and thermal bluetooth printers
   const generateTextReceipt = (invoice: Transaction, settings: ShopSettings): string => {
@@ -219,6 +221,114 @@ export default function KasirTab({
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const handleSilentPrint = (transaksiData: any) => {
+    // 1. Cari atau buat elemen iframe tersembunyi agar tidak merusak tampilan utama kasir
+    let printIframe = document.getElementById('silent-print-iframe') as HTMLIFrameElement;
+    if (!printIframe) {
+      printIframe = document.createElement('iframe');
+      printIframe.id = 'silent-print-iframe';
+      printIframe.style.position = 'absolute';
+      printIframe.style.width = '0px';
+      printIframe.style.height = '0px';
+      printIframe.style.border = 'none';
+      document.body.appendChild(printIframe);
+    }
+
+    const doc = printIframe.contentWindow?.document || printIframe.contentDocument;
+    if (!doc) return;
+
+    // 2. Susun template HTML Struk khusus ukuran kertas thermal (misal: 58mm atau 80mm)
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <style>
+            @page { size: auto; margin: 0mm; }
+            body { 
+              font-family: 'Courier New', Courier, monospace; 
+              width: 58mm; /* Sesuaikan dengan lebar printer kasir Anda (58mm / 80mm) */
+              padding: 5mm;
+              margin: 0;
+              font-size: 12px;
+            }
+            .text-center { text-align: center; }
+            .line { border-top: 1px dashed #000; margin: 5px 0; }
+            .flex-justify { display: flex; justify-content: space-between; }
+          </style>
+        </head>
+        <body>
+          <div class="text-center">
+            <strong>${shopSettings.shopName || 'UD TOSERBA FAZZ FAZZ'}</strong><br>
+            ${shopSettings.shopAddress || 'KASIR OFFLINE SYSTEM'}<br>
+            ID: ${transaksiData.id_transaksi}
+          </div>
+          <div class="line"></div>
+          
+          <!-- Looping item belanjaan -->
+          ${transaksiData.items.map((item: any) => `
+            <div class="flex-justify">
+              <span>${item.name} x${item.quantity}</span>
+              <span>Rp ${item.price.toLocaleString('id-ID')}</span>
+            </div>
+          `).join('')}
+          
+          <div class="line"></div>
+          <div class="flex-justify">
+            <strong>TOTAL:</strong>
+            <strong>Rp ${transaksiData.total.toLocaleString('id-ID')}</strong>
+          </div>
+          <div class="line"></div>
+          <div class="text-center">${shopSettings.receiptFooter || 'Terima Kasih Atas Kunjungan Anda'}</div>
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    // 3. Pemicu perintah cetak otomatis ke sistem peramban
+    setTimeout(() => {
+      printIframe.contentWindow?.focus();
+      printIframe.contentWindow?.print();
+    }, 250);
+  };
+
+  // Contoh fungsi kirim data struk langsung ke printer lokal tanpa pop-up browser (Lokal HTTP API / Server)
+  const cetakStrukLangsung = (invoice: Transaction | null) => {
+    if (!invoice) return;
+
+    const printTargetUrl = shopSettings.localPrintUrl || 'http://localhost:3000/print';
+
+    const dataStruk = {
+      toko: shopSettings.shopName || "UD TOSERBA FAZZ FAZZ",
+      item: invoice.items.map(item => `${item.name} x${item.quantity}`).join(', '),
+      total: invoice.total.toLocaleString('id-ID'),
+      bayar: invoice.amountPaid?.toLocaleString('id-ID') || invoice.total.toLocaleString('id-ID'),
+      kembali: invoice.change?.toLocaleString('id-ID') || '0',
+      id_transaksi: invoice.invoiceNumber,
+      tanggal: new Date(invoice.date).toLocaleString('id-ID')
+    };
+
+    // Mengirim data ke server cetak lokal di komputer kasir
+    fetch(printTargetUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dataStruk)
+    })
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
+      }
+      console.log('Struk berhasil dicetak ke printer termal!');
+      alert('Struk berhasil dikirim ke printer lokal (Tanpa Pop-up)!');
+    })
+    .catch(error => {
+      console.error('Gagal mencetak, pastikan server lokal aktif:', error);
+      setLocalPrintError(error instanceof Error ? error.message : String(error));
+      setShowLocalPrintError(true);
+    });
   };
 
   // Barcode input focus helper
@@ -889,9 +999,9 @@ export default function KasirTab({
             <button
               id="clear_cart_btn"
               onClick={clearCart}
-              className="text-xs font-bold text-red-700 hover:text-red-800 flex items-center gap-1 bg-red-50 border border-red-200 px-2.5 py-1 rounded-lg transition-colors"
+              className="text-xs font-bold text-rose-700 hover:text-rose-900 flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100/80 active:scale-[0.98] border border-rose-200 px-2.5 py-1 rounded-xl transition-all cursor-pointer"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="w-3.5 h-3.5 shrink-0 text-rose-600" />
               <span>Reset</span>
             </button>
           )}
@@ -915,21 +1025,21 @@ export default function KasirTab({
               </div>
 
               {/* Quantity Changer */}
-              <div className="flex items-center gap-2 bg-white p-1 rounded-md border border-slate-250">
+              <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-250 shadow-sm">
                 <button
                   id={`cart_minus_${item.product.id}`}
                   onClick={() => updateQuantity(item.product.id, -1)}
-                  className="p-1 hover:bg-slate-100 text-slate-500 hover:text-slate-950 rounded transition-colors"
+                  className="p-1 hover:bg-slate-100 active:scale-90 text-slate-500 hover:text-slate-950 rounded-lg transition-all cursor-pointer"
                 >
                   <Minus className="w-3.5 h-3.5" />
                 </button>
-                <span className="text-xs font-mono font-bold text-slate-900 w-6 text-center">
+                <span className="text-xs font-mono font-bold text-slate-900 w-6 text-center select-none">
                   {item.quantity}
                 </span>
                 <button
                   id={`cart_plus_${item.product.id}`}
                   onClick={() => updateQuantity(item.product.id, 1)}
-                  className="p-1 hover:bg-slate-100 text-slate-500 hover:text-slate-950 rounded transition-colors"
+                  className="p-1 hover:bg-slate-100 active:scale-90 text-slate-500 hover:text-slate-950 rounded-lg transition-all cursor-pointer"
                   disabled={item.quantity >= item.product.stock}
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -940,7 +1050,7 @@ export default function KasirTab({
               <button
                 id={`cart_remove_${item.product.id}`}
                 onClick={() => removeFromCart(item.product.id)}
-                className="p-1.5 text-slate-400 hover:text-red-750 hover:bg-red-50 rounded transition-colors"
+                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:scale-90 rounded-lg border border-transparent hover:border-rose-100 transition-all cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -973,37 +1083,37 @@ export default function KasirTab({
                   <button
                     id="pay_cash_tab"
                     onClick={() => setPaymentType('CASH')}
-                    className={`flex items-center justify-center gap-1 py-1.5 rounded text-xs font-bold transition-all border ${
+                    className={`flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all border active:scale-[0.98] cursor-pointer ${
                       paymentType === 'CASH'
-                        ? 'bg-slate-950 text-white border-slate-950 shadow-sm'
-                        : 'bg-white border-slate-250 text-slate-600 hover:text-slate-900'
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-950/5'
+                        : 'bg-white border-slate-250 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
-                    <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                    <DollarSign className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                     <span>Tunai</span>
                   </button>
                   <button
                     id="pay_qris_tab"
                     onClick={() => setPaymentType('QRIS')}
-                    className={`flex items-center justify-center gap-1 py-1.5 rounded text-xs font-bold transition-all border ${
+                    className={`flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all border active:scale-[0.98] cursor-pointer ${
                       paymentType === 'QRIS'
-                        ? 'bg-slate-950 text-white border-slate-950 shadow-sm'
-                        : 'bg-white border-slate-250 text-slate-600 hover:text-slate-900'
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-950/5'
+                        : 'bg-white border-slate-250 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
-                    <QrCode className="w-3.5 h-3.5 text-indigo-600" />
+                    <QrCode className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                     <span>QRIS</span>
                   </button>
                   <button
                     id="pay_debt_tab"
                     onClick={() => setPaymentType('DEBT')}
-                    className={`flex items-center justify-center gap-1 py-1.5 rounded text-xs font-bold transition-all border ${
+                    className={`flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all border active:scale-[0.98] cursor-pointer ${
                       paymentType === 'DEBT'
-                        ? 'bg-slate-950 text-white border-slate-950 shadow-sm'
-                        : 'bg-white border-slate-250 text-slate-600 hover:text-slate-900'
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-950/5'
+                        : 'bg-white border-slate-250 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
-                    <UserPlus className="w-3.5 h-3.5 text-amber-600" />
+                    <UserPlus className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                     <span>Utang</span>
                   </button>
                 </div>
@@ -1044,7 +1154,7 @@ export default function KasirTab({
                           key={i}
                           type="button"
                           onClick={() => setAmountPaid(actualDenom.toLocaleString('id-ID'))}
-                          className="px-2 py-1 bg-white hover:bg-slate-100 text-[10px] text-slate-700 rounded font-mono border border-slate-250 shadow-sm transition-colors"
+                          className="px-2.5 py-1 bg-white hover:bg-slate-100 active:scale-[0.95] text-[10px] text-slate-850 rounded-lg font-mono font-bold border border-slate-250 hover:border-slate-350 shadow-sm transition-all cursor-pointer"
                         >
                           {actualDenom === totalValue ? 'Pas' : formatPrice(actualDenom)}
                         </button>
@@ -1156,9 +1266,9 @@ export default function KasirTab({
               <button
                 id="process_checkout_btn"
                 onClick={handleProcessTransaction}
-                className="w-full py-2.5 bg-slate-950 hover:bg-slate-800 text-white font-bold rounded-lg flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all text-sm cursor-pointer"
+                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-500/10 hover:shadow-xl active:scale-[0.98] transition-all text-sm cursor-pointer focus:ring-2 focus:ring-emerald-500/20"
               >
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <CheckCircle2 className="w-4.5 h-4.5 text-emerald-200 shrink-0" />
                 <span>Bayar Sekarang ({formatPrice(getCartTotal())})</span>
               </button>
             </div>
@@ -1187,7 +1297,7 @@ export default function KasirTab({
                   id="select_format_58mm"
                   type="button"
                   onClick={() => setReceiptFormat('58mm')}
-                  className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                  className={`px-2.5 py-1.5 text-[10px] font-bold rounded-md transition-all cursor-pointer active:scale-95 ${
                     receiptFormat === '58mm'
                       ? 'bg-white text-slate-900 shadow-sm'
                       : 'text-slate-600 hover:text-slate-950'
@@ -1199,7 +1309,7 @@ export default function KasirTab({
                   id="select_format_80mm"
                   type="button"
                   onClick={() => setReceiptFormat('80mm')}
-                  className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                  className={`px-2.5 py-1.5 text-[10px] font-bold rounded-md transition-all cursor-pointer active:scale-95 ${
                     receiptFormat === '80mm'
                       ? 'bg-white text-slate-900 shadow-sm'
                       : 'text-slate-600 hover:text-slate-950'
@@ -1344,26 +1454,63 @@ export default function KasirTab({
               </button>
             </div>
 
-            {/* Print and Close controls */}
-            <div className="p-4 bg-white border-t border-slate-200 flex gap-2">
+            {/* Print and Close controls (Premium UI - Organized & Clear Layout) */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 space-y-3">
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                Pilihan Cetak Struk
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  id="direct_local_print_btn"
+                  onClick={() => {
+                    if (activeInvoice) {
+                      cetakStrukLangsung(activeInvoice);
+                    }
+                  }}
+                  className="py-2.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold rounded-xl text-[11px] flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
+                  title="Cetak Langsung (Lokal API)"
+                >
+                  <Printer className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                  <span className="truncate">Lokal API</span>
+                </button>
+                <button
+                  id="silent_print_btn"
+                  onClick={() => {
+                    if (activeInvoice) {
+                      handleSilentPrint({
+                        id_transaksi: activeInvoice.invoiceNumber,
+                        items: activeInvoice.items,
+                        total: activeInvoice.total
+                      });
+                    }
+                  }}
+                  className="py-2.5 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold rounded-xl text-[11px] flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
+                  title="Cetak Thermal (Silent)"
+                >
+                  <Printer className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                  <span className="truncate">Thermal Silent</span>
+                </button>
+              </div>
+
               <button
                 id="print_invoice_btn"
                 onClick={() => window.print()}
-                className="flex-1 py-2.5 bg-slate-950 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-250 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
               >
-                <Printer className="w-4 h-4 text-emerald-400" />
-                <span>Cetak Struk</span>
+                <Printer className="w-4 h-4 text-slate-600 shrink-0" />
+                <span>Cetak / Simpan PDF (A4/Struk)</span>
               </button>
+
               <button
                 id="close_invoice_btn"
                 onClick={() => {
                   setShowInvoice(false);
                   setActiveInvoice(null);
                 }}
-                className="flex-1 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-emerald-100 active:scale-[0.98] cursor-pointer mt-1"
               >
-                <span>Selesai</span>
-                <ChevronRight className="w-4 h-4" />
+                <span>Selesai & Transaksi Baru</span>
+                <ChevronRight className="w-4 h-4 text-emerald-200" />
               </button>
             </div>
           </div>
@@ -1406,6 +1553,102 @@ export default function KasirTab({
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Local Print Error Modal Diagnosis & Fix Dialog */}
+      {showLocalPrintError && (
+        <div id="local_print_error_modal" className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white text-slate-900 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-rose-100 flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="bg-rose-50 border-b border-rose-100 p-5 flex items-start gap-4">
+              <div className="p-2.5 bg-rose-500/10 rounded-xl text-rose-600 shrink-0">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-extrabold text-rose-950 uppercase tracking-wider">Gagal Mengirim Data Cetak</h3>
+                <p className="text-[11px] text-rose-700/80 font-mono mt-1 font-semibold truncate">Error: {localPrintError || 'Failed to fetch'}</p>
+              </div>
+              <button 
+                onClick={() => setShowLocalPrintError(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body with Diagnosis */}
+            <div className="p-6 overflow-y-auto space-y-4 text-xs text-slate-600 leading-relaxed">
+              <div className="bg-slate-50 border border-slate-200/80 p-4 rounded-xl space-y-2">
+                <p className="font-bold text-slate-800 text-xs">Mengapa Hal Ini Terjadi?</p>
+                <p className="text-[11px] text-slate-600">
+                  Aplikasi gagal menghubungi server printer lokal Anda di: 
+                  <code className="bg-slate-200/80 px-1.5 py-0.5 rounded font-mono text-slate-700 font-bold block mt-1 select-all text-[11px]">
+                    {shopSettings.localPrintUrl || 'http://localhost:3000/print'}
+                  </code>
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <p className="font-bold text-slate-800 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
+                  Langkah Solusi & Perbaikan:
+                </p>
+
+                <ol className="list-decimal pl-4 space-y-2 text-[11px]">
+                  <li>
+                    <strong className="text-slate-800">Aktifkan Driver / Server Printer Termal Lokal:</strong>
+                    <p className="mt-0.5 text-slate-500">Pastikan aplikasi server printer (misalnya Python POS Print, Node POS Server, atau thermal driver proxy) di komputer Anda sudah dijalankan dan mendengarkan port tersebut.</p>
+                  </li>
+                  <li>
+                    <strong className="text-slate-800">Masalah Enkripsi Browser (Mixed Content):</strong>
+                    <p className="mt-0.5 text-slate-500">Karena aplikasi POS ini berjalan di jaringan aman (<span className="text-emerald-600 font-semibold font-mono">HTTPS</span>), browser modern memblokir permintaan HTTP biasa (<span className="text-rose-500 font-semibold font-mono">http://</span>) demi keamanan.</p>
+                    <p className="text-amber-700 font-medium mt-1 bg-amber-50 border border-amber-100 p-2 rounded-lg">
+                      💡 <strong>Solusi Terbaik:</strong> Konfigurasikan proxy printer lokal Anda menggunakan protokol <strong className="font-semibold">HTTPS</strong> (misal: <code className="bg-white/80 px-1 rounded font-mono text-[10px]">https://localhost:3000/print</code>) lalu ubah pengaturannya di tab <strong>Pengaturan</strong>.
+                    </p>
+                  </li>
+                  <li>
+                    <strong className="text-slate-800">Gunakan Fallback Cetak Otomatis (Relevan & Aman):</strong>
+                    <p className="mt-0.5 text-slate-500">Gunakan tombol <strong>"Thermal Silent"</strong> atau <strong>"PDF (A4/Struk)"</strong> di bawah sebagai alternatif yang 100% didukung browser tanpa server tambahan.</p>
+                  </li>
+                </ol>
+              </div>
+            </div>
+
+            {/* Modal Footer actions */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  setShowLocalPrintError(false);
+                  window.print();
+                }}
+                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+              >
+                <Printer className="w-4 h-4 text-indigo-200" />
+                <span>Gunakan Printer Browser (Fallback Aman)</span>
+              </button>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    if (activeInvoice) {
+                      copyTextReceipt(activeInvoice);
+                    }
+                  }}
+                  className="py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-250 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Copy className="w-3.5 h-3.5 text-slate-500" />
+                  <span>{copiedReceipt ? 'Disalin!' : 'Salin Teks Struk'}</span>
+                </button>
+                <button
+                  onClick={() => setShowLocalPrintError(false)}
+                  className="py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center justify-center transition-all cursor-pointer"
+                >
+                  Tutup Dialog
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

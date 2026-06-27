@@ -68,11 +68,11 @@ export default function ConfirmationModal({
     }
     switch (type) {
       case 'danger':
-        return 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-100 cursor-pointer';
+        return 'bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white font-bold rounded-xl shadow-sm hover:shadow-rose-100 cursor-pointer focus:ring-2 focus:ring-rose-500/20 transition-all';
       case 'warning':
-        return 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-100 cursor-pointer';
+        return 'bg-amber-600 hover:bg-amber-700 active:scale-[0.98] text-white font-bold rounded-xl shadow-sm hover:shadow-amber-100 cursor-pointer focus:ring-2 focus:ring-amber-500/20 transition-all';
       default:
-        return 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-100 cursor-pointer';
+        return 'bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-bold rounded-xl shadow-sm hover:shadow-indigo-100 cursor-pointer focus:ring-2 focus:ring-indigo-500/20 transition-all';
     }
   };
 
@@ -116,7 +116,7 @@ export default function ConfirmationModal({
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 font-bold text-xs cursor-pointer transition-all"
+            className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 active:scale-[0.98] border border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 font-bold text-xs cursor-pointer transition-all focus:ring-2 focus:ring-slate-100 rounded-xl"
           >
             {cancelText}
           </button>
@@ -124,7 +124,7 @@ export default function ConfirmationModal({
             type="button"
             onClick={onConfirm}
             disabled={isConfirmDisabled}
-            className={`px-4 py-2.5 font-bold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center ${getConfirmButtonClass()}`}
+            className={`px-4 py-2.5 font-bold text-xs rounded-xl shadow-sm flex items-center justify-center ${getConfirmButtonClass()}`}
           >
             {confirmText}
           </button>
