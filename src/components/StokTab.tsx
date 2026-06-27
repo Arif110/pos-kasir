@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Plus, 
   Search, 
@@ -11,26 +11,85 @@ import {
   Barcode,
   X,
   PackagePlus,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Download,
+  Upload,
+  Eye,
+  EyeOff
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { Product, ShopSettings } from '../types';
+import ConfirmationModal from './ConfirmationModal';
 
 interface StokTabProps {
   products: Product[];
   shopSettings: ShopSettings;
+  categoriesList?: string[];
   onSaveProduct: (product: Product) => Promise<void>;
+  onSaveProducts: (productsList: Product[]) => Promise<void>;
   onDeleteProduct: (id: string) => Promise<void>;
 }
+
+const daftarKategoriDefault = [
+  "Sembako & Pokok", 
+  "Makanan & Camilan", 
+  "Minuman (Beverages)", 
+  "Perawatan & Sanitari", 
+  "Kebutuhan Rumah", 
+  "Kebutuhan Bayi",
+  "Aksesoris & ATK", 
+  "Rokok"
+];
+
+const daftarSatuanJual = ["Pcs", "Kg", "Liter", "Pouch", "Btl", "Butir", "Rcg", "Bks", "Kaleng", "Tub", "Pack", "Semprot", "Buah", "Batang"];
 
 export default function StokTab({ 
   products, 
   shopSettings, 
+  categoriesList = [],
   onSaveProduct, 
+  onSaveProducts,
   onDeleteProduct 
 }: StokTabProps) {
+  const kategoriPilihan = categoriesList && categoriesList.length > 0 ? categoriesList : daftarKategoriDefault;
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Semua');
   const [filterLowStock, setFilterLowStock] = useState(false);
+
+  
+  // Custom confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    type?: 'danger' | 'warning' | 'info';
+    onConfirm: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
+  const triggerConfirm = (options: {
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    type?: 'danger' | 'warning' | 'info';
+    onConfirm: () => void | Promise<void>;
+  }) => {
+    setConfirmModal({
+      isOpen: true,
+      ...options,
+      onConfirm: async () => {
+        await options.onConfirm();
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
   
   // Modals state
   const [showAddModal, setShowAddModal] = useState(false);
@@ -41,14 +100,16 @@ export default function StokTab({
     id: '',
     code: '',
     name: '',
-    category: '',
+    category: 'Sembako & Pokok',
     price: 0,
     purchasePrice: 0,
     stock: 0,
-    minStock: 5
+    minStock: 5,
+    satuanJual: 'Pcs',
+    expiryDate: ''
   });
 
-  const categories = ['Semua', ...Array.from(new Set(products.map(p => p.category))).filter(Boolean)];
+  const categories = ['Semua', ...Array.from(new Set([...kategoriPilihan, ...products.map(p => p.category)])).filter(Boolean)];
 
   // Filter products
   const filteredProducts = products.filter(p => {
@@ -64,11 +125,13 @@ export default function StokTab({
       id: 'prod_' + Date.now(),
       code: '',
       name: '',
-      category: 'Makanan',
+      category: kategoriPilihan[0] || 'Sembako & Pokok',
       price: 0,
       purchasePrice: 0,
       stock: 0,
-      minStock: 5
+      minStock: 5,
+      satuanJual: 'Pcs',
+      expiryDate: ''
     });
     setShowAddModal(true);
   };
@@ -82,15 +145,20 @@ export default function StokTab({
       price: p.price,
       purchasePrice: p.purchasePrice,
       stock: p.stock,
-      minStock: p.minStock
+      minStock: p.minStock,
+      satuanJual: p.satuanJual || 'Pcs',
+      expiryDate: p.expiryDate || ''
     });
     setShowEditModal(true);
   };
 
   const handleGenerateBarcode = () => {
-    // Generate a beautiful 12-digit random numeric string representing a custom SKU
-    const randomCode = '899' + Math.floor(100000000 + Math.random() * 900000000).toString();
-    setFormData(prev => ({ ...prev, code: randomCode }));
+    const awalan = "20"; 
+    const idx = kategoriPilihan.indexOf(formData.category);
+    const kodeKategori = String(idx !== -1 ? idx + 1 : 1).padStart(2, '0'); 
+    const nomorAcak = String(Math.floor(1000000 + Math.random() * 9000000)); 
+    const barcodeHasil = awalan + kodeKategori + nomorAcak;
+    setFormData(prev => ({ ...prev, code: barcodeHasil }));
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -101,12 +169,6 @@ export default function StokTab({
       return;
     }
 
-    if (formData.price < formData.purchasePrice) {
-      if (!confirm('Harga jual lebih rendah dari harga beli (potensi rugi). Anda yakin ingin melanjutkan?')) {
-        return;
-      }
-    }
-
     const savedProduct: Product = {
       id: formData.id,
       code: formData.code.trim(),
@@ -115,18 +177,172 @@ export default function StokTab({
       price: Number(formData.price),
       purchasePrice: Number(formData.purchasePrice),
       stock: Number(formData.stock),
-      minStock: Number(formData.minStock)
+      minStock: Number(formData.minStock),
+      satuanJual: formData.satuanJual,
+      expiryDate: formData.expiryDate
     };
 
-    await onSaveProduct(savedProduct);
-    setShowAddModal(false);
-    setShowEditModal(false);
+    const executeSave = async () => {
+      await onSaveProduct(savedProduct);
+      setShowAddModal(false);
+      setShowEditModal(false);
+    };
+
+    if (formData.price < formData.purchasePrice) {
+      triggerConfirm({
+        title: 'Peringatan Harga Jual',
+        message: 'Harga jual lebih rendah dari harga beli (potensi rugi). Anda yakin ingin melanjutkan?',
+        confirmText: 'Lanjutkan',
+        type: 'warning',
+        onConfirm: executeSave
+      });
+    } else {
+      await executeSave();
+    }
   };
 
-  const handleDelete = async (p: Product) => {
-    if (confirm(`Apakah Anda yakin ingin menghapus produk "${p.name}"?`)) {
-      await onDeleteProduct(p.id);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDelete = (p: Product) => {
+    triggerConfirm({
+      title: 'Hapus Produk',
+      message: `Apakah Anda yakin ingin menghapus produk "${p.name}"?`,
+      confirmText: 'Ya, Hapus',
+      type: 'danger',
+      onConfirm: async () => {
+        await onDeleteProduct(p.id);
+      }
+    });
+  };
+
+  const handleExportExcel = () => {
+    const dataUntukExcel = products.map(p => ({
+      "Barcode Label": p.code,
+      "Deskripsi Barang": p.name,
+      "Kategori": p.category,
+      "Satuan Jual (Kasir)": p.satuanJual || 'Pcs',
+      "Harga Modal": p.purchasePrice,
+      "Harga Jual": p.price,
+      "Stok Tersedia": p.stock,
+      "Stok Minimum": p.minStock,
+      "Tanggal Kadaluarsa": p.expiryDate || ''
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataUntukExcel);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Stok Warung");
+    XLSX.writeFile(workbook, "Backup_Stok_Warung.xlsx");
+  };
+
+  const handleImportExcel = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const dataMentah = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(dataMentah, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const hasilJson = XLSX.utils.sheet_to_json(worksheet) as any[];
+
+        if (!hasilJson || hasilJson.length === 0) {
+          alert("File Excel kosong atau format tidak sesuai!");
+          return;
+        }
+
+        const existingProducts = [...products];
+        let addedCount = 0;
+        let updatedCount = 0;
+
+        hasilJson.forEach((item, index) => {
+          const code = String(item["Barcode Label"] || item["SKU / Kode"] || item["Barcode"] || item["code"] || "").trim();
+          if (!code) return; // skip items without a code
+
+          const name = item["Deskripsi Barang"] || item["Nama Barang"] || item["Nama"] || item["name"] || "Produk Tanpa Nama";
+          const category = item["Kategori"] || item["category"] || "Umum";
+          const purchasePrice = Number(item["Harga Modal"] || item["Harga Beli"] || item["purchasePrice"] || 0);
+          const price = Number(item["Harga Jual"] || item["price"] || 0);
+          const stock = Number(item["Stok Tersedia"] || item["Stok"] || item["stock"] || 0);
+          const minStock = Number(item["Stok Minimum"] || item["minStock"] || 5);
+          const satuanJual = String(item["Satuan Jual (Kasir)"] || item["Satuan Jual"] || item["satuanJual"] || "Pcs").trim();
+          const expiryDate = item["Tanggal Kadaluarsa"] || item["expiryDate"] || item["Kadaluarsa"] || "";
+
+          const existingIdx = existingProducts.findIndex(p => p.code === code);
+          if (existingIdx !== -1) {
+            existingProducts[existingIdx] = {
+              ...existingProducts[existingIdx],
+              name,
+              category,
+              purchasePrice,
+              price,
+              stock,
+              minStock,
+              satuanJual,
+              expiryDate: expiryDate ? String(expiryDate).trim() : undefined
+            };
+            updatedCount++;
+          } else {
+            existingProducts.push({
+              id: 'prod_' + (Date.now() + index),
+              code,
+              name,
+              category,
+              purchasePrice,
+              price,
+              stock,
+              minStock,
+              satuanJual,
+              expiryDate: expiryDate ? String(expiryDate).trim() : undefined
+            });
+            addedCount++;
+          }
+        });
+
+        await onSaveProducts(existingProducts);
+        alert(`Berhasil import data dari Excel!\n- ${addedCount} Produk Baru ditambahkan\n- ${updatedCount} Produk Lama diperbarui`);
+      } catch (err) {
+        console.error(err);
+        alert("Gagal membaca file Excel. Pastikan format file sudah benar.");
+      }
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const getExpiryStatus = (expiryDateStr: string | undefined): {
+    status: 'EXPIRED' | 'CRITICAL' | 'WARNING' | 'ALERT' | 'SAFE' | 'NONE';
+    daysLeft: number;
+    monthsLeft: number;
+    label: string;
+  } => {
+    if (!expiryDateStr) {
+      return { status: 'NONE', daysLeft: 9999, monthsLeft: 999, label: '' };
     }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiry = new Date(expiryDateStr);
+    expiry.setHours(0, 0, 0, 0);
+
+    const diffTime = expiry.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffMonths = diffDays / 30.44; // approximate number of days in a month
+
+    if (diffDays <= 0) {
+      return { status: 'EXPIRED', daysLeft: diffDays, monthsLeft: diffMonths, label: 'KADALUARSA' };
+    } else if (diffMonths <= 1) {
+      return { status: 'CRITICAL', daysLeft: diffDays, monthsLeft: diffMonths, label: 'Sisa < 1 Bulan' };
+    } else if (diffMonths <= 2) {
+      return { status: 'WARNING', daysLeft: diffDays, monthsLeft: diffMonths, label: 'Sisa < 2 Bulan' };
+    } else if (diffMonths <= 3) {
+      return { status: 'ALERT', daysLeft: diffDays, monthsLeft: diffMonths, label: 'Sisa < 3 Bulan' };
+    }
+
+    return { status: 'SAFE', daysLeft: diffDays, monthsLeft: diffMonths, label: 'Aman' };
   };
 
   const formatPrice = (num: number) => {
@@ -135,9 +351,10 @@ export default function StokTab({
 
   return (
     <div className="space-y-4">
+
       {/* Search Filter Toolbar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto flex-1">
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col lg:flex-row gap-4 items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto flex-1">
           {/* Search bar */}
           <div className="relative flex-1 max-w-md">
             <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
@@ -168,8 +385,8 @@ export default function StokTab({
           </select>
         </div>
 
-        {/* Right buttons: Low stock filter and Add item */}
-        <div className="flex gap-2.5 w-full md:w-auto justify-end">
+        {/* Right buttons: Low stock filter, Excel buttons and Add item */}
+        <div className="flex flex-wrap gap-2.5 w-full lg:w-auto justify-end">
           <button
             id="filter_low_stock_btn"
             onClick={() => setFilterLowStock(!filterLowStock)}
@@ -180,8 +397,32 @@ export default function StokTab({
             }`}
           >
             <AlertTriangle className="w-4 h-4 text-amber-600" />
-            <span>Peringatan Stok Rendah</span>
+            <span>Stok Rendah</span>
           </button>
+
+          <button
+            id="export_excel_btn"
+            onClick={handleExportExcel}
+            className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
+          >
+            <Download className="w-4 h-4 text-emerald-600" />
+            <span>Export Excel</span>
+          </button>
+
+          <label
+            id="import_excel_label"
+            className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-bold border border-indigo-200 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+          >
+            <Upload className="w-4 h-4 text-indigo-600" />
+            <span>Import Excel</span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={handleImportExcel}
+              className="hidden"
+            />
+          </label>
 
           <button
             id="add_new_product_btn"
@@ -205,8 +446,9 @@ export default function StokTab({
                 <th className="p-4">Kategori</th>
                 <th className="p-4 text-right">Harga Beli</th>
                 <th className="p-4 text-right">Harga Jual</th>
-                <th className="p-4 text-right">Margin / Profit</th>
                 <th className="p-4 text-center">Stok</th>
+                <th className="p-4 text-right">Margin / Profit</th>
+                <th className="p-4 text-center">Kadaluarsa</th>
                 <th className="p-4 text-center">Aksi</th>
               </tr>
             </thead>
@@ -216,6 +458,7 @@ export default function StokTab({
                 const isLowStock = p.stock <= p.minStock && p.stock > 0;
                 const margin = p.price - p.purchasePrice;
                 const profitPercent = p.purchasePrice > 0 ? Math.round((margin / p.purchasePrice) * 100) : 0;
+                const expiryInfo = getExpiryStatus(p.expiryDate);
 
                 return (
                   <tr 
@@ -253,20 +496,54 @@ export default function StokTab({
                     </td>
                     <td className="p-4 text-right font-mono text-xs text-slate-600">{formatPrice(p.purchasePrice)}</td>
                     <td className="p-4 text-right font-mono text-xs text-emerald-700 font-extrabold">{formatPrice(p.price)}</td>
+                    <td className="p-4 text-center font-bold">
+                      <div className="flex flex-col items-center">
+                        <span className={`px-2.5 py-1 rounded-md text-xs font-mono font-bold border ${
+                          isOutOfStock 
+                            ? 'bg-red-50 text-red-700 border-red-200' 
+                            : isLowStock 
+                              ? 'bg-amber-50 text-amber-800 border-amber-200' 
+                              : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        }`}>
+                          {p.stock} {p.satuanJual || 'Pcs'}
+                        </span>
+                      </div>
+                    </td>
                     <td className="p-4 text-right font-mono text-xs">
                       <div className="text-slate-900 font-bold">{formatPrice(margin)}</div>
                       <div className="text-[10px] text-slate-400">Margin: {profitPercent}%</div>
                     </td>
-                    <td className="p-4 text-center font-bold">
-                      <span className={`px-2.5 py-1 rounded-md text-xs font-mono font-bold border ${
-                        isOutOfStock 
-                          ? 'bg-red-50 text-red-700 border-red-200' 
-                          : isLowStock 
-                            ? 'bg-amber-50 text-amber-800 border-amber-200' 
-                            : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                      }`}>
-                        {p.stock} unit
-                      </span>
+                    <td className="p-4 text-center">
+                      {p.expiryDate ? (
+                        <div className="flex flex-col items-center">
+                          <span className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold border ${
+                            expiryInfo.status === 'EXPIRED' 
+                              ? 'bg-red-50 text-red-700 border-red-200 animate-pulse' 
+                              : expiryInfo.status === 'CRITICAL' 
+                                ? 'bg-red-50 text-red-700 border-red-200' 
+                                : expiryInfo.status === 'WARNING' 
+                                  ? 'bg-amber-50 text-amber-800 border-amber-200' 
+                                  : expiryInfo.status === 'ALERT' 
+                                    ? 'bg-yellow-50 text-yellow-800 border-yellow-200' 
+                                    : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          }`}>
+                            {p.expiryDate}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-medium mt-1">
+                            {expiryInfo.status === 'EXPIRED' 
+                              ? '🔴 Expired' 
+                              : expiryInfo.status === 'CRITICAL' 
+                                ? '🔴 < 1 Bln' 
+                                : expiryInfo.status === 'WARNING' 
+                                  ? '🟠 < 2 Bln' 
+                                  : expiryInfo.status === 'ALERT' 
+                                    ? '🟡 < 3 Bln' 
+                                    : '🟢 Aman'}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400 font-mono">-</span>
+                      )}
                     </td>
                     <td className="p-4 text-center">
                       <div className="flex items-center justify-center gap-1.5">
@@ -384,12 +661,69 @@ export default function StokTab({
                     onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-slate-900 cursor-pointer"
                   >
-                    <option value="Makanan">Makanan</option>
-                    <option value="Minuman">Minuman</option>
-                    <option value="Cemilan">Cemilan</option>
-                    <option value="Bahan Pokok">Bahan Pokok</option>
-                    <option value="Lain-lain">Lain-lain</option>
+                    {kategoriPilihan.map((kat) => (
+                      <option key={kat} value={kat}>{kat}</option>
+                    ))}
                   </select>
+                </div>
+
+                {/* Satuan Jual */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wider">Satuan Jual (Kasir) *</label>
+                  <select
+                    id="form_prod_satuan_jual"
+                    value={formData.satuanJual}
+                    onChange={(e) => setFormData(prev => ({ ...prev, satuanJual: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-slate-900 cursor-pointer"
+                  >
+                    {daftarSatuanJual.map((sat) => (
+                      <option key={sat} value={sat}>{sat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Purchase Price */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wider">Harga Beli *</label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs font-bold">
+                      {shopSettings.currencySymbol}
+                    </span>
+                    <input
+                      id="form_prod_purchase"
+                      type="text"
+                      required
+                      placeholder="0"
+                      value={formData.purchasePrice ? formData.purchasePrice.toLocaleString('id-ID') : ''}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\D/g, '');
+                        setFormData(prev => ({ ...prev, purchasePrice: parseInt(raw, 10) || 0 }));
+                      }}
+                      className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-slate-900 font-mono font-bold"
+                    />
+                  </div>
+                </div>
+
+                {/* Selling Price */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wider">Harga Jual *</label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs font-bold">
+                      {shopSettings.currencySymbol}
+                    </span>
+                    <input
+                      id="form_prod_price"
+                      type="text"
+                      required
+                      placeholder="0"
+                      value={formData.price ? formData.price.toLocaleString('id-ID') : ''}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\D/g, '');
+                        setFormData(prev => ({ ...prev, price: parseInt(raw, 10) || 0 }));
+                      }}
+                      className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-slate-900 font-mono font-bold text-emerald-700"
+                    />
+                  </div>
                 </div>
 
                 {/* Initial Stock */}
@@ -407,46 +741,6 @@ export default function StokTab({
                   />
                 </div>
 
-                {/* Purchase Price */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wider">Harga Beli *</label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs font-bold">
-                      {shopSettings.currencySymbol}
-                    </span>
-                    <input
-                      id="form_prod_purchase"
-                      type="number"
-                      required
-                      min="0"
-                      placeholder="0"
-                      value={formData.purchasePrice || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, purchasePrice: parseFloat(e.target.value) || 0 }))}
-                      className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-slate-900 font-mono font-bold"
-                    />
-                  </div>
-                </div>
-
-                {/* Selling Price */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wider">Harga Jual *</label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs font-bold">
-                      {shopSettings.currencySymbol}
-                    </span>
-                    <input
-                      id="form_prod_price"
-                      type="number"
-                      required
-                      min="0"
-                      placeholder="0"
-                      value={formData.price || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-                      className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-slate-900 font-mono font-bold text-emerald-700"
-                    />
-                  </div>
-                </div>
-
                 {/* Min stock limit warning threshold */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wider">Limit Peringatan Minimum</label>
@@ -461,6 +755,21 @@ export default function StokTab({
                   />
                   <span className="text-[10px] text-slate-400 block mt-1 leading-tight">
                     Notifikasi menyala jika stok berada di bawah batas ini.
+                  </span>
+                </div>
+
+                {/* Tanggal Kadaluarsa */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wider">Tanggal Kadaluarsa</label>
+                  <input
+                    id="form_prod_expiry"
+                    type="date"
+                    value={formData.expiryDate || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, expiryDate: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-slate-900 font-mono"
+                  />
+                  <span className="text-[10px] text-slate-400 block mt-1 leading-tight">
+                    Kosongkan jika produk tidak memiliki tanggal kadaluarsa.
                   </span>
                 </div>
 
@@ -507,6 +816,18 @@ export default function StokTab({
           </div>
         </div>
       )}
+
+      {/* Custom Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        type={confirmModal.type}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
 
     </div>
   );

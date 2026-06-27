@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
 import { Lock, User, Store, ArrowRight, ShieldCheck } from 'lucide-react';
-import { UserProfile } from '../types';
+import { UserProfile, CashierAccount, ShopSettings } from '../types';
 
 interface LoginProps {
   onLoginSuccess: (user: UserProfile) => void;
-  shopName: string;
+  shopSettings: ShopSettings;
+  cashiers: CashierAccount[];
 }
 
-export default function Login({ onLoginSuccess, shopName }: LoginProps) {
+export default function Login({ onLoginSuccess, shopSettings, cashiers }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const ownerUser = (shopSettings?.ownerUsername || 'owner').toLowerCase();
+  const ownerPass = shopSettings?.ownerPassword || '123';
+  const ownerFullName = shopSettings?.ownerName || 'Arif Rahman';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,35 +24,32 @@ export default function Login({ onLoginSuccess, shopName }: LoginProps) {
     setError('');
 
     setTimeout(() => {
-      // Simple and secure credentials for cashier app demo
-      if (username.toLowerCase() === 'owner' && password === '123') {
+      // Check for owner or registered cashiers
+      if (username.toLowerCase() === ownerUser && password === ownerPass) {
         onLoginSuccess({
-          username: 'owner',
+          username: ownerUser,
           role: 'OWNER',
-          fullName: 'Budi Santoso (Owner)'
-        });
-      } else if (username.toLowerCase() === 'kasir' && password === '123') {
-        onLoginSuccess({
-          username: 'kasir',
-          role: 'CASHIER',
-          fullName: 'Siti Aminah (Kasir)'
+          fullName: `${ownerFullName} (Owner)`
         });
       } else {
-        setError('Username atau password salah! (Tips: gunakan owner/123 atau kasir/123)');
-        setIsLoading(false);
+        const foundCashier = cashiers.find(
+          (c) => c.username.toLowerCase() === username.toLowerCase() && c.password === password
+        );
+        if (foundCashier) {
+          onLoginSuccess({
+            username: foundCashier.username,
+            role: 'CASHIER',
+            fullName: `${foundCashier.fullName} (Kasir)`
+          });
+        } else {
+          setError('Username atau password salah! (Hubungi Owner jika Anda belum terdaftar)');
+          setIsLoading(false);
+        }
       }
     }, 600);
   };
 
-  const handleQuickLogin = (role: 'OWNER' | 'CASHIER') => {
-    if (role === 'OWNER') {
-      setUsername('owner');
-      setPassword('123');
-    } else {
-      setUsername('kasir');
-      setPassword('123');
-    }
-  };
+  const shopName = shopSettings?.shopName || 'KASIR PINTAR';
 
   return (
     <div id="login_container" className="min-h-screen flex items-center justify-center bg-[#F4F4F7] p-4">
@@ -63,7 +65,7 @@ export default function Login({ onLoginSuccess, shopName }: LoginProps) {
             <Store className="w-7 h-7 text-white" />
           </div>
           <h1 className="text-xl font-extrabold tracking-tight">{shopName || 'KASIR PINTAR'}</h1>
-          <p className="text-xs text-slate-300 mt-1 font-mono tracking-wide">Sistem Point of Sale & Manajemen Real-Time</p>
+          <p className="text-xs text-slate-300 mt-1 font-mono tracking-wide">Sistem Point of Sale & Real-Time POS</p>
         </div>
 
         {/* Form Body */}
@@ -79,7 +81,7 @@ export default function Login({ onLoginSuccess, shopName }: LoginProps) {
                   id="login_username"
                   type="text"
                   required
-                  placeholder="Masukkan username (owner / kasir)"
+                  placeholder="Masukkan username Anda"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-colors"
@@ -97,7 +99,7 @@ export default function Login({ onLoginSuccess, shopName }: LoginProps) {
                   id="login_password"
                   type="password"
                   required
-                  placeholder="Masukkan password (123)"
+                  placeholder="Masukkan password Anda"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-colors"
@@ -127,34 +129,6 @@ export default function Login({ onLoginSuccess, shopName }: LoginProps) {
               )}
             </button>
           </form>
-
-          {/* Quick Setup credentials helper */}
-          <div className="mt-8 border-t border-slate-100 pt-6">
-            <div className="flex items-center gap-1 text-slate-400 mb-3 justify-center text-xs">
-              <ShieldCheck className="w-3.5 h-3.5 text-slate-600" />
-              <span className="font-semibold tracking-wide uppercase text-[10px]">Akses Cepat Demo</span>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                id="quick_login_owner"
-                onClick={() => handleQuickLogin('OWNER')}
-                className="py-2.5 px-3 bg-slate-50 hover:bg-slate-100/80 border border-slate-200 rounded-lg text-left transition-all hover:border-slate-900"
-              >
-                <div className="text-[10px] text-slate-500 font-bold">AKSES OWNER</div>
-                <div className="text-xs text-slate-800 font-extrabold font-mono">owner / 123</div>
-                <div className="text-[9px] text-emerald-600 font-semibold mt-1">Akses semua fitur</div>
-              </button>
-              <button
-                id="quick_login_kasir"
-                onClick={() => handleQuickLogin('CASHIER')}
-                className="py-2.5 px-3 bg-slate-50 hover:bg-slate-100/80 border border-slate-200 rounded-lg text-left transition-all hover:border-slate-900"
-              >
-                <div className="text-[10px] text-slate-500 font-bold">AKSES KASIR</div>
-                <div className="text-xs text-slate-800 font-extrabold font-mono">kasir / 123</div>
-                <div className="text-[9px] text-amber-600 font-semibold mt-1">Kasir, Stok & Utang</div>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

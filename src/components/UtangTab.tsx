@@ -54,7 +54,7 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
     e.preventDefault();
     if (!selectedDebt) return;
 
-    const payValue = parseFloat(paymentAmount);
+    const payValue = parseFloat(paymentAmount.replace(/\./g, ''));
     if (isNaN(payValue) || payValue <= 0) {
       alert('Masukkan jumlah pembayaran yang valid!');
       return;
@@ -326,13 +326,14 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
                         </span>
                         <input
                           id="debt_pay_input_field"
-                          type="number"
+                          type="text"
                           required
-                          min="1"
-                          max={selectedDebt.remainingDebt}
                           placeholder="Masukkan nilai bayar..."
                           value={paymentAmount}
-                          onChange={(e) => setPaymentAmount(e.target.value)}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/\D/g, '');
+                            setPaymentAmount(raw ? parseInt(raw, 10).toLocaleString('id-ID') : '');
+                          }}
                           className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 font-mono font-bold focus:outline-none focus:border-slate-900"
                         />
                       </div>
@@ -343,7 +344,7 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
                       <button
                         id="shortcut_debt_pay_all"
                         type="button"
-                        onClick={() => setPaymentAmount(selectedDebt.remainingDebt.toString())}
+                        onClick={() => setPaymentAmount(selectedDebt.remainingDebt.toLocaleString('id-ID'))}
                         className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-950 text-xs font-bold border border-slate-250 rounded-lg flex-1 transition-colors"
                       >
                         Bayar Lunas ({formatPrice(selectedDebt.remainingDebt)})
@@ -352,7 +353,7 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
                         <button
                           id="shortcut_debt_pay_half"
                           type="button"
-                          onClick={() => setPaymentAmount((selectedDebt.remainingDebt / 2).toString())}
+                          onClick={() => setPaymentAmount((selectedDebt.remainingDebt / 2).toLocaleString('id-ID'))}
                           className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-250 rounded-lg flex-1 transition-colors"
                         >
                           Bayar Setengah

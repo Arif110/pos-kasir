@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   UserProfile, 
   Product, 
   Transaction, 
   Debt, 
-  ShopSettings 
+  ShopSettings,
+  CashierAccount 
 } from './types';
 import { dbService, DEFAULT_SETTINGS } from './lib/firebase';
+import { performAutoBackup } from './lib/autoBackup';
 import Login from './components/Login';
 import Navbar from './components/Navbar';
 import KasirTab from './components/KasirTab';
@@ -23,11 +25,35 @@ export default function App() {
     return saved ? JSON.parse(saved) : null;
   });
 
+  // Track current user in a ref for unload listener
+  const currentUserRef = useRef(currentUser);
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
+
+  // Handle auto-backup on window exit/close/refresh
+  useEffect(() => {
+    const handleUnload = () => {
+      performAutoBackup(currentUserRef.current);
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+    window.addEventListener('pagehide', handleUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+      window.removeEventListener('pagehide', handleUnload);
+    };
+  }, []);
+
+
   // Database collections states
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [debts, setDebts] = useState<Debt[]>([]);
   const [shopSettings, setShopSettings] = useState<ShopSettings>(DEFAULT_SETTINGS);
+  const [cashiers, setCashiers] = useState<CashierAccount[]>([]);
+  const [categoriesList, setCategoriesList] = useState<string[]>([]);
   
   const [activeTab, setActiveTab] = useState('kasir');
   const [isLoading, setIsLoading] = useState(true);
@@ -56,6 +82,16 @@ export default function App() {
       setShopSettings(sett);
     });
 
+    // Subscribe to cashiers
+    const unsubCashiers = dbService.subscribeCashiers((cashierList) => {
+      setCashiers(cashierList);
+    });
+
+    // Subscribe to categories
+    const unsubCategories = dbService.subscribeCategories((cats) => {
+      setCategoriesList(cats);
+    });
+
     // Stop loading indicator after a short instant timeout
     const timer = setTimeout(() => {
       setIsLoading(false);
@@ -66,9 +102,16 @@ export default function App() {
       unsubTransactions();
       unsubDebts();
       unsubSettings();
+      unsubCashiers();
+      unsubCategories();
       clearTimeout(timer);
     };
   }, []);
+
+  // Save categories list to database
+  const handleSaveCategories = async (newCats: string[]) => {
+    await dbService.saveCategories(newCats);
+  };
 
   // Session login trigger
   const handleLoginSuccess = (user: UserProfile) => {
@@ -82,10 +125,9 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    if (confirm('Apakah Anda yakin ingin keluar dari akun?')) {
-      setCurrentUser(null);
-      localStorage.removeItem('pos_active_user');
-    }
+    performAutoBackup(currentUser);
+    setCurrentUser(null);
+    localStorage.removeItem('pos_active_user');
   };
 
   // CORE WRITE OPERATIONS - Intercepts state and writes to Firebase Service
@@ -115,6 +157,10 @@ export default function App() {
     await dbService.saveProduct(product);
   };
 
+  const handleSaveProducts = async (productsList: Product[]) => {
+    await dbService.saveProducts(productsList);
+  };
+
   const handleDeleteProduct = async (id: string) => {
     await dbService.deleteProduct(id);
   };
@@ -122,6 +168,14 @@ export default function App() {
   const handleSaveSettings = async (settings: ShopSettings) => {
     await dbService.saveSettings(settings);
     setShopSettings(settings);
+  };
+
+  const handleSaveCashier = async (cashier: CashierAccount) => {
+    await dbService.saveCashier(cashier);
+  };
+
+  const handleDeleteCashier = async (id: string) => {
+    await dbService.deleteCashier(id);
   };
 
   const handleResetAllData = async () => {
@@ -134,24 +188,9 @@ export default function App() {
     products: Product[];
     transactions: Transaction[];
     debts: Debt[];
+    cashiers?: CashierAccount[];
   }) => {
-    // 1. Save settings
-    await dbService.saveSettings(backupData.settings);
-    
-    // 2. Overwrite products in firestore
-    for (const p of backupData.products) {
-      await dbService.saveProduct(p);
-    }
-
-    // 3. Overwrite debts
-    for (const d of backupData.debts) {
-      await dbService.saveDebt(d);
-    }
-
-    // 4. Overwrite transactions (since transaction collection is auto-created, we write item by item)
-    for (const tx of backupData.transactions) {
-      await dbService.saveTransaction(tx);
-    }
+    await dbService.restoreBackupData(backupData);
   };
 
   // Warning thresholds calculation
@@ -179,7 +218,8 @@ export default function App() {
     return (
       <Login 
         onLoginSuccess={handleLoginSuccess} 
-        shopName={shopSettings?.shopName || 'KASIR PINTAR'} 
+        shopSettings={shopSettings} 
+        cashiers={cashiers}
       />
     );
   }
@@ -216,6 +256,7 @@ export default function App() {
           <KasirTab 
             products={products} 
             shopSettings={shopSettings}
+            categoriesList={categoriesList}
             onAddTransaction={handleAddTransaction}
             onAddDebt={handleAddDebt}
           />
@@ -225,7 +266,9 @@ export default function App() {
           <StokTab 
             products={products}
             shopSettings={shopSettings}
+            categoriesList={categoriesList}
             onSaveProduct={handleSaveProduct}
+            onSaveProducts={handleSaveProducts}
             onDeleteProduct={handleDeleteProduct}
           />
         )}
@@ -253,9 +296,14 @@ export default function App() {
             products={products}
             transactions={transactions}
             debts={debts}
+            cashiers={cashiers}
+            categoriesList={categoriesList}
             onSaveSettings={handleSaveSettings}
             onResetAllData={handleResetAllData}
             onRestoreBackup={handleRestoreBackup}
+            onSaveCashier={handleSaveCashier}
+            onDeleteCashier={handleDeleteCashier}
+            onSaveCategories={handleSaveCategories}
           />
         )}
 

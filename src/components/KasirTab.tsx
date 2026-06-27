@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Search, 
   ShoppingCart, 
@@ -13,16 +13,33 @@ import {
   RotateCcw,
   CheckCircle2,
   ScanLine,
+  ChevronLeft,
   ChevronRight,
   User,
   Phone,
-  Calendar
+  Calendar,
+  Copy,
+  Download,
+  Check,
+  AlertTriangle,
+  X,
+  Eye,
+  EyeOff,
+  ShieldAlert
 } from 'lucide-react';
 import { Product, CartItem, Transaction, Debt, ShopSettings } from '../types';
+
+interface StockAlertToast {
+  id: string;
+  productName: string;
+  remainingStock: number;
+  minStock: number;
+}
 
 interface KasirTabProps {
   products: Product[];
   shopSettings: ShopSettings;
+  categoriesList?: string[];
   onAddTransaction: (tx: Transaction) => Promise<void>;
   onAddDebt: (debt: Debt) => Promise<void>;
 }
@@ -30,6 +47,7 @@ interface KasirTabProps {
 export default function KasirTab({ 
   products, 
   shopSettings, 
+  categoriesList = [],
   onAddTransaction, 
   onAddDebt 
 }: KasirTabProps) {
@@ -46,22 +64,187 @@ export default function KasirTab({
   const [dueDate, setDueDate] = useState('');
   const [transactionNotes, setTransactionNotes] = useState('');
   
+  // Toast states for stock alerts
+  const [stockAlerts, setStockAlerts] = useState<StockAlertToast[]>([]);
+
+  // Low stock warning banner states
+  const [showLowStockBanner, setShowLowStockBanner] = useState(true);
+  const [filterLowStockOnly, setFilterLowStockOnly] = useState(false);
+
+  const lowStockInDb = useMemo(() => {
+    return products.filter(p => p.stock <= p.minStock);
+  }, [products]);
+
+  // Expiry warning banner states
+  const [showExpiryAlert, setShowExpiryAlert] = useState(true);
+  const [expiryFilter, setExpiryFilter] = useState<'ALL' | 'EXPIRED' | 'CRITICAL' | 'WARNING' | 'ALERT'>('ALL');
+
+  const getExpiryStatus = (expiryDateStr: string | undefined): {
+    status: 'EXPIRED' | 'CRITICAL' | 'WARNING' | 'ALERT' | 'SAFE' | 'NONE';
+    daysLeft: number;
+    monthsLeft: number;
+    label: string;
+  } => {
+    if (!expiryDateStr) {
+      return { status: 'NONE', daysLeft: 9999, monthsLeft: 999, label: '' };
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiry = new Date(expiryDateStr);
+    expiry.setHours(0, 0, 0, 0);
+
+    const diffTime = expiry.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffMonths = diffDays / 30.44; // approximate number of days in a month
+
+    if (diffDays <= 0) {
+      return { status: 'EXPIRED', daysLeft: diffDays, monthsLeft: diffMonths, label: 'KADALUARSA' };
+    } else if (diffMonths <= 1) {
+      return { status: 'CRITICAL', daysLeft: diffDays, monthsLeft: diffMonths, label: 'Sisa < 1 Bulan' };
+    } else if (diffMonths <= 2) {
+      return { status: 'WARNING', daysLeft: diffDays, monthsLeft: diffMonths, label: 'Sisa < 2 Bulan' };
+    } else if (diffMonths <= 3) {
+      return { status: 'ALERT', daysLeft: diffDays, monthsLeft: diffMonths, label: 'Sisa < 3 Bulan' };
+    }
+
+    return { status: 'SAFE', daysLeft: diffDays, monthsLeft: diffMonths, label: 'Aman' };
+  };
+
+  const expiringProducts = useMemo(() => {
+    return products
+      .map(p => ({ product: p, expiryInfo: getExpiryStatus(p.expiryDate) }))
+      .filter(item => ['EXPIRED', 'CRITICAL', 'WARNING', 'ALERT'].includes(item.expiryInfo.status))
+      .sort((a, b) => a.expiryInfo.daysLeft - b.expiryInfo.daysLeft);
+  }, [products]);
+  
+  // Auto dismiss stock alerts after 6 seconds
+  useEffect(() => {
+    if (stockAlerts.length > 0) {
+      const timer = setTimeout(() => {
+        setStockAlerts(prev => prev.slice(1));
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [stockAlerts]);
+  
+  const parsedAmountPaid = parseFloat(amountPaid.replace(/\./g, '')) || 0;
+  
   // Invoice states
   const [showInvoice, setShowInvoice] = useState(false);
   const [activeInvoice, setActiveInvoice] = useState<Transaction | null>(null);
+  const [copiedReceipt, setCopiedReceipt] = useState(false);
+  const [receiptFormat, setReceiptFormat] = useState<'58mm' | '80mm'>('58mm');
+
+  // Plain-Text receipt compiler for copy/download fallbacks and thermal bluetooth printers
+  const generateTextReceipt = (invoice: Transaction, settings: ShopSettings): string => {
+    const colWidth = 32;
+    const divider = '='.repeat(colWidth);
+    const dashedDivider = '-'.repeat(colWidth);
+    
+    const centerText = (text: string) => {
+      if (text.length >= colWidth) return text.substring(0, colWidth);
+      const padding = Math.floor((colWidth - text.length) / 2);
+      return ' '.repeat(padding) + text;
+    };
+
+    const justifyText = (left: string, right: string) => {
+      const spaceNeeded = colWidth - left.length - right.length;
+      if (spaceNeeded <= 0) {
+        return left + ' ' + right;
+      }
+      return left + ' '.repeat(spaceNeeded) + right;
+    };
+
+    let out = '';
+    out += centerText(settings.shopName.toUpperCase()) + '\n';
+    out += centerText(settings.shopAddress) + '\n';
+    out += centerText('Telp: ' + settings.shopPhone) + '\n';
+    out += divider + '\n';
+    
+    out += 'No: ' + invoice.invoiceNumber + '\n';
+    out += 'Tgl: ' + new Date(invoice.date).toLocaleString('id-ID') + '\n';
+    out += 'Metode: ' + invoice.paymentType + '\n';
+    if (invoice.customerName) {
+      out += 'Pelanggan: ' + invoice.customerName.toUpperCase() + '\n';
+    }
+    out += divider + '\n';
+
+    invoice.items.forEach(item => {
+      out += item.name.substring(0, colWidth) + '\n';
+      const leftDetail = `  ${item.quantity} x ${(item.price).toLocaleString('id-ID')}`;
+      const rightDetail = (item.subtotal).toLocaleString('id-ID');
+      out += justifyText(leftDetail, rightDetail) + '\n';
+    });
+
+    out += dashedDivider + '\n';
+    out += justifyText('TOTAL:', (invoice.total).toLocaleString('id-ID')) + '\n';
+    
+    if (invoice.paymentType === 'CASH') {
+      out += justifyText('BAYAR (TUNAI):', (invoice.amountPaid).toLocaleString('id-ID')) + '\n';
+      out += justifyText('KEMBALIAN:', (invoice.change).toLocaleString('id-ID')) + '\n';
+    } else if (invoice.paymentType === 'QRIS') {
+      out += centerText('STATUS QRIS: LUNAS') + '\n';
+    } else if (invoice.paymentType === 'DEBT') {
+      out += justifyText('SISA UTANG:', (invoice.total).toLocaleString('id-ID')) + '\n';
+    }
+    
+    out += divider + '\n';
+    out += centerText(settings.receiptFooter) + '\n';
+    out += centerText('TERIMA KASIH') + '\n';
+    
+    return out;
+  };
+
+  const copyTextReceipt = (invoice: Transaction | null) => {
+    if (!invoice) return;
+    const text = generateTextReceipt(invoice, shopSettings);
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedReceipt(true);
+      setTimeout(() => setCopiedReceipt(false), 2000);
+    }).catch(err => {
+      console.error('Failed to copy text receipt:', err);
+    });
+  };
+
+  const downloadTextReceipt = (invoice: Transaction | null) => {
+    if (!invoice) return;
+    const text = generateTextReceipt(invoice, shopSettings);
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Struk-${invoice.invoiceNumber}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   // Barcode input focus helper
   const barcodeRef = useRef<HTMLInputElement>(null);
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollCategories = (direction: 'left' | 'right') => {
+    if (categoryScrollRef.current) {
+      const scrollAmount = 200;
+      categoryScrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   // Derive unique categories
-  const categories = ['Semua', ...Array.from(new Set(products.map(p => p.category)))];
+  const categories = ['Semua', ...Array.from(new Set(categoriesList && categoriesList.length > 0 ? categoriesList : products.map(p => p.category)))];
 
   // Filtered products
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           p.code.includes(searchQuery);
     const matchesCategory = selectedCategory === 'Semua' || p.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const matchesLowStock = !filterLowStockOnly || p.stock <= p.minStock;
+    return matchesSearch && matchesCategory && matchesLowStock;
   });
 
   const addToCart = (product: Product) => {
@@ -149,7 +332,7 @@ export default function KasirTab({
 
     // Validation
     if (paymentType === 'CASH') {
-      const cash = parseFloat(amountPaid);
+      const cash = parseFloat(amountPaid.replace(/\./g, ''));
       if (isNaN(cash) || cash < total) {
         alert('Jumlah bayar tidak mencukupi atau tidak valid!');
         return;
@@ -212,6 +395,24 @@ export default function KasirTab({
       await onAddDebt(newDebt);
     }
 
+    // Check for products reaching or dropping below minStock
+    const lowStockItems: StockAlertToast[] = [];
+    cart.forEach(item => {
+      const remainingStock = Math.max(0, item.product.stock - item.quantity);
+      if (remainingStock <= item.product.minStock) {
+        lowStockItems.push({
+          id: `${item.product.id}_${Date.now()}_${Math.random()}`,
+          productName: item.product.name,
+          remainingStock: remainingStock,
+          minStock: item.product.minStock
+        });
+      }
+    });
+
+    if (lowStockItems.length > 0) {
+      setStockAlerts(prev => [...prev, ...lowStockItems]);
+    }
+
     // Trigger Invoice View
     setActiveInvoice(transaction);
     setShowInvoice(true);
@@ -223,7 +424,280 @@ export default function KasirTab({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <div className="space-y-4 w-full">
+      {/* Expiration Alerts Notification Banner */}
+      {expiringProducts.length > 0 && (() => {
+        const expiredCount = expiringProducts.filter(p => p.expiryInfo.status === 'EXPIRED').length;
+        const criticalCount = expiringProducts.filter(p => p.expiryInfo.status === 'CRITICAL').length;
+        const warningCount = expiringProducts.filter(p => p.expiryInfo.status === 'WARNING').length;
+        const alertCount = expiringProducts.filter(p => p.expiryInfo.status === 'ALERT').length;
+
+        const filteredExpiringProducts = expiringProducts.filter(({ expiryInfo }) => {
+          if (expiryFilter === 'ALL') return true;
+          return expiryInfo.status === expiryFilter;
+        });
+
+        return (
+          <div id="premium_expiry_alert_banner" className="bg-gradient-to-r from-amber-50/80 via-white to-red-50/40 border border-amber-200/90 rounded-2xl p-5 shadow-sm flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-100 pb-4">
+              <div className="flex gap-3 items-start">
+                <div className="bg-amber-100 p-2.5 rounded-full text-amber-700 shadow-inner flex shrink-0 animate-pulse">
+                  <AlertTriangle className="w-5.5 h-5.5" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-extrabold text-slate-900 text-sm tracking-tight flex items-center gap-2">
+                    <span>Notifikasi Batas Kedaluarsa Barang</span>
+                    <span className="bg-red-100 text-red-700 text-[10px] font-black px-2 py-0.5 rounded-full animate-bounce">
+                      {expiringProducts.length} Barang
+                    </span>
+                  </h4>
+                  <p className="text-xs text-slate-500 leading-normal">
+                    Pantau produk yang telah lewat tanggal kedaluarsa atau mendekati jatuh tempo dalam 3 bulan mendatang untuk meminimalkan kerugian toko Anda.
+                  </p>
+                </div>
+              </div>
+              
+              <button
+                id="toggle_expiry_alert_btn"
+                type="button"
+                onClick={() => setShowExpiryAlert(!showExpiryAlert)}
+                className="flex items-center justify-center gap-1.5 text-xs font-bold text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100/80 border border-amber-200/60 rounded-xl px-4 py-2 shadow-sm transition-all shrink-0 self-start sm:self-center"
+              >
+                {showExpiryAlert ? (
+                  <>
+                    <EyeOff className="w-4 h-4" />
+                    <span>Sembunyikan Panel</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-4 h-4" />
+                    <span>Tampilkan Semua ({expiringProducts.length})</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {showExpiryAlert && (
+              <div className="space-y-4 animate-fadeIn">
+                {/* Filter Tabs Inside Expiry Banner */}
+                <div className="flex flex-wrap gap-1.5 p-1 bg-slate-100/80 rounded-xl w-fit">
+                  <button
+                    type="button"
+                    onClick={() => setExpiryFilter('ALL')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      expiryFilter === 'ALL'
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                    }`}
+                  >
+                    Semua ({expiringProducts.length})
+                  </button>
+                  {expiredCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setExpiryFilter('EXPIRED')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        expiryFilter === 'EXPIRED'
+                          ? 'bg-red-600 text-white shadow-sm'
+                          : 'text-red-600 hover:bg-red-50'
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-current animate-ping" />
+                      Expired ({expiredCount})
+                    </button>
+                  )}
+                  {criticalCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setExpiryFilter('CRITICAL')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        expiryFilter === 'CRITICAL'
+                          ? 'bg-red-500 text-white shadow-sm'
+                          : 'text-red-500 hover:bg-red-50/50'
+                      }`}
+                    >
+                      &lt; 1 Bln ({criticalCount})
+                    </button>
+                  )}
+                  {warningCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setExpiryFilter('WARNING')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        expiryFilter === 'WARNING'
+                          ? 'bg-amber-500 text-white shadow-sm'
+                          : 'text-amber-600 hover:bg-amber-50/50'
+                      }`}
+                    >
+                      &lt; 2 Bln ({warningCount})
+                    </button>
+                  )}
+                  {alertCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setExpiryFilter('ALERT')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        expiryFilter === 'ALERT'
+                          ? 'bg-yellow-500 text-slate-900 shadow-sm'
+                          : 'text-yellow-700 hover:bg-yellow-50/50'
+                      }`}
+                    >
+                      &lt; 3 Bln ({alertCount})
+                    </button>
+                  )}
+                </div>
+
+                {/* Expiry Cards Grid */}
+                {filteredExpiringProducts.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-slate-400 font-medium">
+                    Tidak ada barang dengan kriteria kedaluarsa ini.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[280px] overflow-y-auto pr-1">
+                    {filteredExpiringProducts.map(({ product, expiryInfo }) => {
+                      // Custom borders & badges based on severity
+                      let severityColor = 'border-l-red-600 bg-red-50/50 text-red-950';
+                      let labelText = '🔴 KADALUARSA';
+                      if (expiryInfo.status === 'CRITICAL') {
+                        severityColor = 'border-l-red-500 bg-red-50/30 text-red-900';
+                        labelText = '🔴 Sisa < 1 Bulan';
+                      } else if (expiryInfo.status === 'WARNING') {
+                        severityColor = 'border-l-amber-500 bg-amber-50/40 text-amber-900';
+                        labelText = '🟠 Sisa < 2 Bulan';
+                      } else if (expiryInfo.status === 'ALERT') {
+                        severityColor = 'border-l-yellow-400 bg-yellow-50/30 text-yellow-900';
+                        labelText = '🟡 Sisa < 3 Bulan';
+                      }
+
+                      return (
+                        <div 
+                          key={product.id} 
+                          className={`p-3 rounded-xl border border-slate-200 border-l-4 ${severityColor} text-xs flex flex-col justify-between gap-2.5 transition-all hover:shadow-md hover:scale-[1.01]`}
+                        >
+                          <div className="space-y-1">
+                            <div className="font-extrabold truncate text-slate-900" title={product.name}>
+                              {product.name}
+                            </div>
+                            <div className="flex justify-between text-[10px] text-slate-500">
+                              <span className="font-mono">SKU: {product.code}</span>
+                              <span className="font-semibold bg-slate-100 text-slate-700 px-1 rounded">
+                                Stok: {product.stock} {product.satuanJual || 'Pcs'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between border-t border-slate-100 pt-2 mt-0.5">
+                            <span className="text-[10px] font-bold text-slate-500 font-mono">
+                              Exp: {product.expiryDate}
+                            </span>
+                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-white/80 shadow-sm">
+                              {labelText}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Premium Low Stock Warning Banner */}
+      {lowStockInDb.length > 0 && (
+        <div id="low_stock_cashier_alert" className="bg-gradient-to-r from-amber-50/70 via-white to-orange-50/30 border border-amber-200/80 rounded-2xl p-4 shadow-sm flex flex-col gap-3 animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex gap-2.5 items-start">
+              <div className="bg-amber-100 p-2 rounded-full text-amber-700 shrink-0 flex items-center justify-center animate-pulse">
+                <ShieldAlert className="w-5 h-5" />
+              </div>
+              <div className="space-y-0.5">
+                <h4 className="font-extrabold text-slate-900 text-sm tracking-tight flex items-center gap-2">
+                  <span>Peringatan Stok Barang Menipis</span>
+                  <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-2 py-0.5 rounded-full animate-bounce">
+                    {lowStockInDb.length} Produk
+                  </span>
+                </h4>
+                <p className="text-xs text-slate-500 leading-normal">
+                  Beberapa komoditas telah berada di bawah batas minimum stok. Segera hubungi distributor untuk re-stock barang.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-center">
+              {/* Quick toggle filter on cashier list */}
+              <button
+                id="btn_toggle_low_stock_filter"
+                type="button"
+                onClick={() => setFilterLowStockOnly(!filterLowStockOnly)}
+                className={`text-xs font-bold px-3.5 py-2 rounded-xl border transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
+                  filterLowStockOnly
+                    ? 'bg-amber-600 border-amber-600 text-white font-extrabold'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <span>{filterLowStockOnly ? 'Tampilkan Semua Barang' : 'Filter Stok Menipis'}</span>
+              </button>
+
+              {/* Show/Hide details panel */}
+              <button
+                id="btn_toggle_low_stock_banner"
+                type="button"
+                onClick={() => setShowLowStockBanner(!showLowStockBanner)}
+                className="text-xs font-bold text-amber-800 hover:text-amber-950 bg-amber-50 hover:bg-amber-100/80 border border-amber-200/50 rounded-xl px-3 py-2 transition-all shadow-sm cursor-pointer"
+                title="Sembunyikan rincian"
+              >
+                {showLowStockBanner ? 'Sembunyikan Rincian' : `Lihat Semua (${lowStockInDb.length})`}
+              </button>
+            </div>
+          </div>
+
+          {showLowStockBanner && (
+            <div className="border-t border-amber-100 pt-3 mt-1 animate-fadeIn">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Daftar Barang Kritis & Stok Minimum</span>
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                {lowStockInDb.map((p) => {
+                  const isOutOfStock = p.stock <= 0;
+                  return (
+                    <div 
+                      id={`low_stock_item_${p.id}`}
+                      key={p.id} 
+                      onClick={() => {
+                        if (p.stock > 0) addToCart(p);
+                      }}
+                      className={`min-w-[190px] max-w-[220px] p-2.5 rounded-xl border flex flex-col justify-between gap-1.5 transition-all select-none bg-white shadow-sm hover:shadow-md cursor-pointer ${
+                        isOutOfStock 
+                          ? 'border-red-200 bg-red-50/10 hover:border-red-300 pointer-events-none opacity-60' 
+                          : 'border-slate-150 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-800 truncate" title={p.name}>{p.name}</p>
+                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">SKU: {p.code}</p>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-50 mt-1">
+                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded leading-none ${
+                          isOutOfStock 
+                            ? 'bg-red-100 text-red-700' 
+                            : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {isOutOfStock ? 'HABIS' : `Sisa ${p.stock} ${p.satuanJual || 'Pcs'}`}
+                        </span>
+                        <span className="text-[9px] text-slate-400 font-mono font-bold">Min: {p.minStock}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
       
       {/* Products & Search Section */}
       <div id="cashier_left" className="lg:col-span-7 xl:col-span-8 flex flex-col gap-4">
@@ -273,22 +747,51 @@ export default function KasirTab({
             </form>
           </div>
 
-          {/* Categories Selector */}
-          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
-            {categories.map((cat) => (
-              <button
-                id={`category_tab_${cat}`}
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all border ${
-                  selectedCategory === cat
-                    ? 'bg-slate-950 text-white border-slate-950 shadow-sm'
-                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+          {/* Categories Selector with Slider Controls */}
+          <div className="relative flex items-center w-full group/slider pt-1">
+            {/* Left Button */}
+            <button
+              id="category_slide_left"
+              type="button"
+              onClick={() => scrollCategories('left')}
+              className="absolute left-0 z-10 p-1.5 bg-white/95 hover:bg-slate-50 border border-slate-200 rounded-lg shadow-sm text-slate-600 hover:text-slate-900 transition-all cursor-pointer opacity-100 md:opacity-0 md:group-hover/slider:opacity-100 focus:opacity-100"
+              title="Geser Kiri"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {/* Categories container */}
+            <div 
+              ref={categoryScrollRef}
+              className="flex gap-2 overflow-x-auto pb-1.5 w-full scroll-smooth px-8 scrollbar-none"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {categories.map((cat) => (
+                <button
+                  id={`category_tab_${cat}`}
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border cursor-pointer ${
+                    selectedCategory === cat
+                      ? 'bg-slate-950 text-white border-slate-950 shadow-sm font-extrabold scale-[1.02]'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-100 hover:border-slate-300'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            {/* Right Button */}
+            <button
+              id="category_slide_right"
+              type="button"
+              onClick={() => scrollCategories('right')}
+              className="absolute right-0 z-10 p-1.5 bg-white/95 hover:bg-slate-50 border border-slate-200 rounded-lg shadow-sm text-slate-600 hover:text-slate-900 transition-all cursor-pointer opacity-100 md:opacity-0 md:group-hover/slider:opacity-100 focus:opacity-100"
+              title="Geser Kanan"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
@@ -357,7 +860,7 @@ export default function KasirTab({
                           ? 'Habis' 
                           : remainingStock <= 0 
                             ? 'Keranjang Penuh'
-                            : `Stok: ${remainingStock} unit`
+                            : `Stok: ${remainingStock} ${p.satuanJual || 'Pcs'}`
                         }
                       </span>
                     </div>
@@ -506,7 +1009,7 @@ export default function KasirTab({
                 </div>
               </div>
 
-              {/* CASH Payment UI */}
+               {/* CASH Payment UI */}
               {paymentType === 'CASH' && (
                 <div className="space-y-2">
                   <div>
@@ -517,10 +1020,13 @@ export default function KasirTab({
                       </span>
                       <input
                         id="amount_paid_cash"
-                        type="number"
+                        type="text"
                         placeholder="0"
                         value={amountPaid}
-                        onChange={(e) => setAmountPaid(e.target.value)}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/\D/g, '');
+                          setAmountPaid(raw ? parseInt(raw, 10).toLocaleString('id-ID') : '');
+                        }}
                         className="w-full pl-8 pr-2 py-1.5 bg-white border border-slate-300 rounded text-sm text-slate-900 placeholder-slate-400 font-mono font-bold focus:outline-none focus:border-slate-900"
                       />
                     </div>
@@ -537,7 +1043,7 @@ export default function KasirTab({
                           id={`denom_btn_${i}`}
                           key={i}
                           type="button"
-                          onClick={() => setAmountPaid(actualDenom.toString())}
+                          onClick={() => setAmountPaid(actualDenom.toLocaleString('id-ID'))}
                           className="px-2 py-1 bg-white hover:bg-slate-100 text-[10px] text-slate-700 rounded font-mono border border-slate-250 shadow-sm transition-colors"
                         >
                           {actualDenom === totalValue ? 'Pas' : formatPrice(actualDenom)}
@@ -547,11 +1053,11 @@ export default function KasirTab({
                   </div>
 
                   {/* Change calculation */}
-                  {parseFloat(amountPaid) >= getCartTotal() && (
+                  {parsedAmountPaid >= getCartTotal() && (
                     <div className="flex items-center justify-between text-xs text-emerald-800 pt-1.5 border-t border-slate-200 font-bold">
                       <span>Kembalian:</span>
                       <span className="font-extrabold font-mono text-sm text-emerald-750">
-                        {formatPrice(parseFloat(amountPaid) - getCartTotal())}
+                        {formatPrice(parsedAmountPaid - getCartTotal())}
                       </span>
                     </div>
                   )}
@@ -635,11 +1141,11 @@ export default function KasirTab({
 
               {/* Optional Notes field */}
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 mb-0.5 uppercase tracking-wide">Catatan Transaksi</label>
+                <label className="block text-[10px] font-bold text-slate-500 mb-0.5 uppercase tracking-wide">Keterangan / Catatan Tambahan (Opsional)</label>
                 <input
                   id="transaction_notes_input"
                   type="text"
-                  placeholder="Tambahkan keterangan (opsional)..."
+                  placeholder="Contoh: Meja 5, bungkus, dll (opsional)..."
                   value={transactionNotes}
                   onChange={(e) => setTransactionNotes(e.target.value)}
                   className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900"
@@ -673,18 +1179,65 @@ export default function KasirTab({
               <p className="text-[10px] text-slate-300 font-mono mt-0.5">{activeInvoice.invoiceNumber}</p>
             </div>
 
+            {/* Format Selector */}
+            <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center gap-2">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Format Kertas:</span>
+              <div className="flex bg-slate-200/60 p-0.5 rounded-lg border border-slate-200">
+                <button
+                  id="select_format_58mm"
+                  type="button"
+                  onClick={() => setReceiptFormat('58mm')}
+                  className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                    receiptFormat === '58mm'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-950'
+                  }`}
+                >
+                  Thermal 58mm
+                </button>
+                <button
+                  id="select_format_80mm"
+                  type="button"
+                  onClick={() => setReceiptFormat('80mm')}
+                  className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                    receiptFormat === '80mm'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-950'
+                  }`}
+                >
+                  Thermal 80mm
+                </button>
+              </div>
+            </div>
+
             {/* Receipt Content (standard print output) */}
-            <div id="printable_receipt" className="p-5 font-mono text-xs space-y-4 max-h-[60vh] overflow-y-auto">
+            <div 
+              id="printable_receipt" 
+              className={`p-5 font-mono space-y-4 max-h-[50vh] overflow-y-auto mx-auto border-x border-b border-slate-100 bg-slate-50/40 shadow-inner transition-all duration-300 ${
+                receiptFormat === '58mm' 
+                  ? 'receipt-58mm max-w-[270px] text-[10px]' 
+                  : 'receipt-80mm max-w-full text-xs'
+              }`}
+            >
               {/* Store Details */}
               <div className="text-center space-y-1">
-                <h4 className="text-sm font-extrabold uppercase tracking-wide">{shopSettings.shopName}</h4>
+                {shopSettings.logoUrl && (
+                  <div className="flex justify-center mb-2.5">
+                    <img 
+                      src={shopSettings.logoUrl} 
+                      alt="Logo Toko" 
+                      className="max-h-12 w-auto object-contain max-w-[90px] rounded-lg bg-white p-0.5 border border-slate-100" 
+                    />
+                  </div>
+                )}
+                <h4 className="receipt-title text-sm font-extrabold uppercase tracking-wide">{shopSettings.shopName}</h4>
                 <p className="text-[10px] text-slate-500 leading-tight">{shopSettings.shopAddress}</p>
                 <p className="text-[10px] text-slate-500">Telp: {shopSettings.shopPhone}</p>
                 <div className="border-b border-dashed border-slate-300 pt-2" />
               </div>
 
               {/* Invoice Meta details */}
-              <div className="space-y-0.5 text-[11px] text-slate-600">
+              <div className="receipt-meta space-y-0.5 text-[11px] text-slate-600">
                 <div className="flex justify-between">
                   <span>Waktu:</span>
                   <span className="font-bold">{new Date(activeInvoice.date).toLocaleString('id-ID')}</span>
@@ -703,7 +1256,7 @@ export default function KasirTab({
               </div>
 
               {/* Items Table */}
-              <div className="space-y-2 text-[11px]">
+              <div className="receipt-items space-y-2 text-[11px]">
                 {activeInvoice.items.map((item, index) => (
                   <div key={index} className="flex justify-between items-start gap-2">
                     <div className="flex-1">
@@ -717,7 +1270,7 @@ export default function KasirTab({
               </div>
 
               {/* Summary */}
-              <div className="space-y-1 text-xs">
+              <div className="receipt-summary space-y-1 text-xs">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
                   <span className="font-bold font-mono">{activeInvoice.total.toLocaleString('id-ID')}</span>
@@ -737,7 +1290,7 @@ export default function KasirTab({
                 {activeInvoice.paymentType === 'QRIS' && (
                   <div className="flex justify-between text-emerald-800 font-bold">
                     <span>Status QRIS:</span>
-                    <span>LUNAS SYNC</span>
+                    <span>LUNAS</span>
                   </div>
                 )}
                 {activeInvoice.paymentType === 'DEBT' && (
@@ -755,21 +1308,50 @@ export default function KasirTab({
               </div>
 
               {/* Footer */}
-              <div className="text-center text-[10px] text-slate-500 pt-2 space-y-1">
+              <div className="receipt-footer text-center text-[10px] text-slate-500 pt-2 space-y-1">
                 <div className="border-t border-dashed border-slate-300 pt-2" />
                 <p className="whitespace-pre-line">{shopSettings.receiptFooter}</p>
-                <p className="font-bold text-[9px] text-slate-400 mt-1">POWERED BY KASIR PINTAR CLOUD</p>
+                <p className="font-bold text-[9px] text-slate-400 mt-1">POWERED BY KASIR PINTAR OFFLINE</p>
               </div>
             </div>
 
+            {/* Quick Actions (Copy & Download Plain Text Struk) */}
+            <div className="px-4 py-2 bg-slate-100 border-t border-slate-200 flex gap-2 justify-center items-center">
+              <button
+                id="copy_invoice_text_btn"
+                onClick={() => copyTextReceipt(activeInvoice)}
+                className="flex-1 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-250 font-bold rounded-lg text-[10px] flex items-center justify-center gap-1 transition-all shadow-sm cursor-pointer"
+              >
+                {copiedReceipt ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-emerald-700">Berhasil Disalin</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Salin Struk (WA/Bluetooth)</span>
+                  </>
+                )}
+              </button>
+              <button
+                id="download_invoice_txt_btn"
+                onClick={() => downloadTextReceipt(activeInvoice)}
+                className="flex-1 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-250 font-bold rounded-lg text-[10px] flex items-center justify-center gap-1 transition-all shadow-sm cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-500" />
+                <span>Unduh File TXT</span>
+              </button>
+            </div>
+
             {/* Print and Close controls */}
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex gap-2">
+            <div className="p-4 bg-white border-t border-slate-200 flex gap-2">
               <button
                 id="print_invoice_btn"
                 onClick={() => window.print()}
-                className="flex-1 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                className="flex-1 py-2.5 bg-slate-950 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer"
               >
-                <Printer className="w-4 h-4" />
+                <Printer className="w-4 h-4 text-emerald-400" />
                 <span>Cetak Struk</span>
               </button>
               <button
@@ -778,7 +1360,7 @@ export default function KasirTab({
                   setShowInvoice(false);
                   setActiveInvoice(null);
                 }}
-                className="flex-1 py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                className="flex-1 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer"
               >
                 <span>Selesai</span>
                 <ChevronRight className="w-4 h-4" />
@@ -788,6 +1370,46 @@ export default function KasirTab({
         </div>
       )}
 
+      {/* Floating Stock Alert Toast Notifications Container */}
+      {stockAlerts.length > 0 && (
+        <div id="stock_alert_toast_container" className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-auto">
+          {stockAlerts.map((alert) => (
+            <div 
+              key={alert.id}
+              className="bg-white border-l-4 border-l-amber-500 border border-slate-200 text-slate-800 rounded-xl p-4 shadow-xl flex gap-3 relative hover:shadow-2xl transition-all duration-300 transform translate-y-0 opacity-100"
+            >
+              <div className="bg-amber-50 p-2 rounded-lg text-amber-600 self-start shrink-0">
+                <AlertTriangle className="w-5 h-5 animate-pulse" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <h4 className="font-bold text-xs text-slate-900">Stok Mencapai Batas Minimum!</h4>
+                <p className="text-[11px] leading-relaxed text-slate-600">
+                  Produk <strong className="text-slate-900 font-extrabold">{alert.productName}</strong> hampir habis setelah transaksi ini.
+                </p>
+                <div className="flex items-center gap-2 text-[10px] font-mono mt-1 text-slate-500">
+                  <span className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                    Sisa: <strong className="text-red-600 font-bold">{alert.remainingStock}</strong>
+                  </span>
+                  <span>|</span>
+                  <span className="bg-amber-50/50 px-1.5 py-0.5 rounded border border-amber-100">
+                    Min: <strong className="text-amber-700 font-semibold">{alert.minStock}</strong>
+                  </span>
+                </div>
+              </div>
+              <button 
+                id={`close_toast_${alert.id}`}
+                onClick={() => setStockAlerts(prev => prev.filter(x => x.id !== alert.id))}
+                className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-md transition-colors self-start shrink-0 cursor-pointer"
+                title="Sembunyikan Peringatan"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      </div>
     </div>
   );
 }

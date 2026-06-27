@@ -73,7 +73,7 @@ export default function Navbar({
                 {shopSettings.shopName}
               </h1>
               <span className="text-[10px] text-slate-500 font-mono tracking-wider font-semibold block uppercase">
-                Real-Time Cloud POS
+                Sistem Kasir Mandiri
               </span>
             </div>
           </div>

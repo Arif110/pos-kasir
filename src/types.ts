@@ -7,6 +7,9 @@ export interface Product {
   purchasePrice: number; // Buying price (for profit calculation)
   stock: number;
   minStock: number; // For low-stock alerts
+  satuanJual?: string;
+  satuanGrosir?: string;
+  expiryDate?: string; // Format: YYYY-MM-DD
 }
 
 export interface CartItem {
@@ -62,6 +65,10 @@ export interface ShopSettings {
   qrisText: string; // Text to generate QR code (e.g. static QRIS string)
   receiptFooter: string;
   currencySymbol: string;
+  logoUrl?: string;
+  ownerUsername?: string;
+  ownerPassword?: string;
+  ownerName?: string;
 }
 
 export interface UserProfile {
@@ -69,3 +76,28 @@ export interface UserProfile {
   role: 'OWNER' | 'CASHIER';
   fullName: string;
 }
+
+export interface CashierAccount {
+  id: string;
+  username: string;
+  fullName: string;
+  password: string;
+  createdAt: string;
+}
+
+export interface AutoBackup {
+  id: string;
+  timestamp: string;
+  user: string;
+  fileName: string;
+  data: {
+    settings: ShopSettings;
+    products: Product[];
+    transactions: Transaction[];
+    debts: Debt[];
+    cashiers?: CashierAccount[];
+    categories?: string[];
+    exportedAt: string;
+  };
+}
+

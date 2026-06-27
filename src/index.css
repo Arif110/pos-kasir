@@ -43,23 +43,100 @@
   background: #94a3b8;
 }
 
+/* Hide scrollbars for sliders */
+.scrollbar-none::-webkit-scrollbar {
+  display: none !important;
+}
+.scrollbar-none {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
 /* Print utilities so the cash receipts and QRIS print sheet look flawless on printers */
 @media print {
+  body {
+    background-color: white !important;
+    color: black !important;
+  }
+  
   body * {
     visibility: hidden;
   }
+  
+  /* Disable default browser headers and footers, and optimize margins */
+  @page {
+    margin: 0 !important;
+  }
+  
   #printable_receipt, #printable_receipt * {
     visibility: visible;
   }
+  
   #printable_receipt {
     position: absolute;
     left: 0;
     top: 0;
-    width: 100%;
+    margin: 0 !important;
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+    border: none !important;
   }
+
+  /* 58mm specific print config */
+  #printable_receipt.receipt-58mm {
+    width: 58mm !important;
+    max-width: 58mm !important;
+    padding: 4mm 2mm 6mm 2mm !important;
+    font-size: 8px !important;
+    line-height: 1.2 !important;
+  }
+  
+  #printable_receipt.receipt-58mm .receipt-title {
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    margin-bottom: 2px !important;
+  }
+  
+  #printable_receipt.receipt-58mm .receipt-meta,
+  #printable_receipt.receipt-58mm .receipt-items,
+  #printable_receipt.receipt-58mm .receipt-summary {
+    font-size: 8.5px !important;
+  }
+  
+  #printable_receipt.receipt-58mm .receipt-footer {
+    font-size: 7.5px !important;
+  }
+
+  /* 80mm specific print config */
+  #printable_receipt.receipt-80mm {
+    width: 80mm !important;
+    max-width: 80mm !important;
+    padding: 6mm 4mm 10mm 4mm !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+  }
+  
+  #printable_receipt.receipt-80mm .receipt-title {
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    margin-bottom: 4px !important;
+  }
+  
+  #printable_receipt.receipt-80mm .receipt-meta,
+  #printable_receipt.receipt-80mm .receipt-items,
+  #printable_receipt.receipt-80mm .receipt-summary {
+    font-size: 11.5px !important;
+  }
+  
+  #printable_receipt.receipt-80mm .receipt-footer {
+    font-size: 10px !important;
+  }
+
   #printable_qris_sheet, #printable_qris_sheet * {
     visibility: visible;
   }
+  
   #printable_qris_sheet {
     position: absolute;
     left: 0;
