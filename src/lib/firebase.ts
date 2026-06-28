@@ -24,7 +24,7 @@ export const DEFAULT_PRODUCTS: Product[] = [
 ];
 
 export const DEFAULT_SETTINGS: ShopSettings = {
-  shopName: "Toko Toserba Fazz Fazz",
+  shopName: "Toko Toserba",
   shopAddress: "Jl. Merdeka No. 45, Jakarta Pusat",
   shopPhone: "081234567890",
   qrisText: "00020101021126610016ID10202111111110203A01511100112345678901234567895204599953033605405100005802ID5913BERKAH STORE6013JAKARTA PUSAT6304A1B2",
@@ -230,7 +230,12 @@ export const dbService = {
   // Subscribe to Shop Settings
   subscribeSettings: (callback: (settings: ShopSettings) => void) => {
     settingsListeners.push(callback);
-    callback(getLocalData<ShopSettings>('pos_settings', DEFAULT_SETTINGS));
+    const settings = getLocalData<ShopSettings>('pos_settings', DEFAULT_SETTINGS);
+    if (settings && settings.shopName && settings.shopName.toUpperCase().includes("FAZZ FAZZ")) {
+      settings.shopName = settings.shopName.replace(/\s*[fF][aA][zZ][zZ]\s*[fF][aA][zZ][zZ]/g, '').trim();
+      setLocalData('pos_settings', settings);
+    }
+    callback(settings);
     return () => {
       settingsListeners = settingsListeners.filter(cb => cb !== callback);
     };

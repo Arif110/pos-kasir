@@ -38,10 +38,10 @@ import { Transaction, Product, Debt, ShopSettings } from '../types';
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-slate-900 text-white p-3 rounded-xl border border-slate-800 shadow-xl text-xs font-sans space-y-1">
-        <p className="font-bold text-slate-200">{payload[0].payload.name}</p>
-        <p className="font-mono text-indigo-400">
-          Stok: <span className="font-extrabold text-white">{payload[0].value.toLocaleString('id-ID')}</span> unit
+      <div className="bg-white text-slate-800 p-3 rounded-xl border border-slate-200 shadow-xl text-xs font-sans space-y-1">
+        <p className="font-bold text-slate-700">{payload[0].payload.name}</p>
+        <p className="font-mono text-cyan-600 font-semibold">
+          Stok: <span className="font-extrabold text-slate-800">{payload[0].value.toLocaleString('id-ID')}</span> unit
         </p>
       </div>
     );
@@ -270,14 +270,14 @@ export default function AnalitikTab({
     <div className="space-y-4">
       
       {/* Top Selector Subtabs */}
-      <div className="flex items-center gap-2 bg-slate-900/60 p-1.5 rounded-xl w-fit border border-slate-800/80">
+      <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl w-fit border border-slate-200/60">
         <button
           id="tab_analitik_dashboard"
           onClick={() => setActiveSubTab('STATISTIK')}
           className={`text-xs font-bold px-4 py-2 rounded-lg transition-all active:scale-[0.98] cursor-pointer ${
             activeSubTab === 'STATISTIK'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20 font-extrabold'
-              : 'text-slate-300 hover:text-white hover:bg-slate-800/40'
+              ? 'bg-gradient-to-r from-sky-600 to-cyan-500 text-white shadow-md shadow-cyan-500/10 font-extrabold'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
           }`}
         >
           Dashboard Analitik
@@ -287,8 +287,8 @@ export default function AnalitikTab({
           onClick={() => setActiveSubTab('RIWAYAT_PENJUALAN')}
           className={`text-xs font-bold px-4 py-2 rounded-lg transition-all active:scale-[0.98] cursor-pointer ${
             activeSubTab === 'RIWAYAT_PENJUALAN'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20 font-extrabold'
-              : 'text-slate-300 hover:text-white hover:bg-slate-800/40'
+              ? 'bg-gradient-to-r from-sky-600 to-cyan-500 text-white shadow-md shadow-cyan-500/10 font-extrabold'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
           }`}
         >
           Riwayat Penjualan
@@ -302,79 +302,79 @@ export default function AnalitikTab({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             
             {/* 1. KARTU OMSET PENJUALAN */}
-            <div className="bg-[#131a2a]/55 backdrop-blur-md border border-white/5 rounded-2xl p-5 relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:border-white/10 hover:shadow-[0_12px_30px_-10px_rgba(0,0,0,0.5)]">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-100">
               {/* Ambient Glow Effect */}
-              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all duration-500 pointer-events-none"></div>
+              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-sky-500/5 rounded-full blur-2xl group-hover:bg-sky-500/10 transition-all duration-500 pointer-events-none"></div>
               
               <div className="flex justify-between items-start mb-3">
-                <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">Omset Penjualan</span>
-                <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">+100%</span>
+                <span className="text-xs font-bold text-slate-500 tracking-wider uppercase">Omset Penjualan</span>
+                <span className="text-[10px] font-extrabold text-sky-600 bg-sky-50 px-2 py-0.5 rounded border border-sky-100">+100%</span>
               </div>
-              <div className="text-2xl font-extrabold text-white tracking-tight mb-2 font-mono">
+              <div className="text-2xl font-extrabold text-slate-800 tracking-tight mb-2 font-mono">
                 {formatPrice(totalRevenue)}
               </div>
-              <p className="text-[11px] text-slate-400 leading-normal">Akumulasi total omset kotor</p>
+              <p className="text-[11px] text-slate-500 leading-normal">Akumulasi total omset kotor</p>
             </div>
 
             {/* 2. KARTU LABA BERSIH */}
-            <div className="bg-[#131a2a]/55 backdrop-blur-md border border-white/5 rounded-2xl p-5 relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:border-white/10 hover:shadow-[0_12px_30px_-10px_rgba(0,0,0,0.5)]">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-100">
               {/* Ambient Glow Effect */}
-              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-teal-500/10 rounded-full blur-2xl group-hover:bg-teal-500/20 transition-all duration-500 pointer-events-none"></div>
+              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-all duration-500 pointer-events-none"></div>
               
               <div className="flex justify-between items-start mb-3">
-                <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">Laba Bersih</span>
-                <span className="text-[10px] font-extrabold text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded border border-teal-500/20">NET</span>
+                <span className="text-xs font-bold text-slate-500 tracking-wider uppercase">Laba Bersih</span>
+                <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">NET</span>
               </div>
-              <div className="text-2xl font-extrabold text-white tracking-tight mb-2 font-mono">
+              <div className="text-2xl font-extrabold text-slate-800 tracking-tight mb-2 font-mono">
                 {formatPrice(totalProfit)}
               </div>
-              <p className="text-[11px] text-slate-400 leading-normal">Selisih penjualan minus modal</p>
+              <p className="text-[11px] text-slate-500 leading-normal">Selisih penjualan minus modal</p>
             </div>
 
             {/* 3. KARTU PIUTANG AKTIF */}
-            <div className="bg-[#131a2a]/55 backdrop-blur-md border border-white/5 rounded-2xl p-5 relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:border-white/10 hover:shadow-[0_12px_30px_-10px_rgba(0,0,0,0.5)]">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-100">
               {/* Ambient Glow Effect */}
-              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-all duration-500 pointer-events-none"></div>
+              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl group-hover:bg-amber-500/10 transition-all duration-500 pointer-events-none"></div>
               
               <div className="flex justify-between items-start mb-3">
-                <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">Piutang Aktif</span>
-                <span className="text-[10px] font-extrabold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">UTANG</span>
+                <span className="text-xs font-bold text-slate-500 tracking-wider uppercase">Piutang Aktif</span>
+                <span className="text-[10px] font-extrabold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">UTANG</span>
               </div>
-              <div className="text-2xl font-extrabold text-amber-500 tracking-tight mb-2 font-mono">
+              <div className="text-2xl font-extrabold text-amber-600 tracking-tight mb-2 font-mono">
                 {formatPrice(totalOutstandingDebt)}
               </div>
-              <p className="text-[11px] text-slate-400 leading-normal">Total tagihan utang belum lunas</p>
+              <p className="text-[11px] text-slate-500 leading-normal">Total tagihan utang belum lunas</p>
             </div>
 
             {/* 4. KARTU JUMLAH TRANSAKSI */}
-            <div className="bg-[#131a2a]/55 backdrop-blur-md border border-white/5 rounded-2xl p-5 relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:border-white/10 hover:shadow-[0_12px_30px_-10px_rgba(0,0,0,0.5)]">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-100">
               {/* Ambient Glow Effect */}
-              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all duration-500 pointer-events-none"></div>
+              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl group-hover:bg-cyan-500/10 transition-all duration-500 pointer-events-none"></div>
               
               <div className="flex justify-between items-start mb-3">
-                <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">Jumlah Transaksi</span>
-                <span className="text-[10px] font-extrabold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">VOL</span>
+                <span className="text-xs font-bold text-slate-500 tracking-wider uppercase">Jumlah Transaksi</span>
+                <span className="text-[10px] font-extrabold text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-100">VOL</span>
               </div>
-              <div className="text-2xl font-extrabold text-white tracking-tight mb-2 font-mono">
-                {totalTxCount} <span className="text-lg font-medium text-slate-400">Nota</span>
+              <div className="text-2xl font-extrabold text-slate-800 tracking-tight mb-2 font-mono">
+                {totalTxCount} <span className="text-lg font-medium text-slate-500">Nota</span>
               </div>
-              <p className="text-[11px] text-slate-400 leading-normal">Total faktur terbit di database</p>
+              <p className="text-[11px] text-slate-500 leading-normal">Total faktur terbit di database</p>
             </div>
 
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative">
             {/* Ambient Glow Effects */}
-            <div className="absolute -top-20 -left-20 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-amber-500/5 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute -top-20 -left-20 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
             {/* 1. Area Tren Penjualan (Kiri & Tengah) */}
-            <div id="trend_chart_panel" className="lg:col-span-2 bg-[#131a2a]/60 backdrop-blur-md border border-white/5 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+            <div id="trend_chart_panel" className="lg:col-span-2 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-md flex flex-col justify-between">
               <div className="mb-4">
-                <h2 className="text-lg font-bold text-white tracking-tight">
-                  Tren Penjualan <span className="text-emerald-400 font-normal text-sm ml-1">(7 Hari Terakhir)</span>
+                <h2 className="text-lg font-bold text-slate-800 tracking-tight">
+                  Tren Penjualan <span className="text-cyan-600 font-normal text-sm ml-1">(7 Hari Terakhir)</span>
                 </h2>
-                <p className="text-xs text-slate-400 mt-0.5">Grafik real-time transaksi penjualan terkini</p>
+                <p className="text-xs text-slate-500 mt-0.5">Grafik real-time transaksi penjualan terkini</p>
               </div>
               
               {/* Responsive Area Chart */}
@@ -386,11 +386,11 @@ export default function AnalitikTab({
                   >
                     <defs>
                       <linearGradient id="salesChartGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#10b981" stopOpacity={0.25} />
-                        <stop offset="100%" stopColor="#10b981" stopOpacity={0.0} />
+                        <stop offset="0%" stopColor="#0284c7" stopOpacity={0.2} />
+                        <stop offset="100%" stopColor="#0284c7" stopOpacity={0.0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0, 0, 0, 0.05)" vertical={false} />
                     <XAxis 
                       dataKey="date" 
                       stroke="#64748b" 
@@ -399,7 +399,7 @@ export default function AnalitikTab({
                       axisLine={false} 
                     />
                     <YAxis 
-                      stroke="#475569" 
+                      stroke="#64748b" 
                       fontSize={10} 
                       tickLine={false} 
                       axisLine={false} 
@@ -409,26 +409,26 @@ export default function AnalitikTab({
                       content={({ active, payload }: any) => {
                         if (active && payload && payload.length) {
                           return (
-                            <div className="bg-slate-900 text-white p-3 rounded-xl border border-slate-800 shadow-xl text-xs font-sans space-y-1">
-                              <p className="font-bold text-slate-200">{payload[0].payload.date}</p>
-                              <p className="font-mono text-emerald-400 font-semibold">
-                                Omset: <span className="font-extrabold text-white">Rp {payload[0].value.toLocaleString('id-ID')}</span>
+                            <div className="bg-white text-slate-800 p-3 rounded-xl border border-slate-200 shadow-xl text-xs font-sans space-y-1">
+                              <p className="font-bold text-slate-700">{payload[0].payload.date}</p>
+                              <p className="font-mono text-cyan-600 font-semibold">
+                                Omset: <span className="font-extrabold text-slate-800">Rp {payload[0].value.toLocaleString('id-ID')}</span>
                               </p>
                             </div>
                           );
                         }
                         return null;
                       }} 
-                      cursor={{ fill: 'rgba(255, 255, 255, 0.03)', radius: 12 }} 
+                      cursor={{ fill: 'rgba(0, 0, 0, 0.02)', radius: 12 }} 
                     />
                     <Area 
                       type="monotone" 
                       dataKey="sales" 
-                      stroke="#10b981" 
+                      stroke="#0284c7" 
                       strokeWidth={3}
                       fillOpacity={1} 
                       fill="url(#salesChartGradient)" 
-                      dot={{ r: 4, strokeWidth: 1.5, fill: '#10b981', stroke: '#fff' }}
+                      dot={{ r: 4, strokeWidth: 1.5, fill: '#0284c7', stroke: '#fff' }}
                       activeDot={{ r: 6 }}
                     />
                   </AreaChart>
@@ -437,10 +437,10 @@ export default function AnalitikTab({
             </div>
 
             {/* 2. Area Barang Paling Laris (Kanan) */}
-            <div id="best_sellers_panel" className="bg-[#131a2a]/60 backdrop-blur-md border border-white/5 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+            <div id="best_sellers_panel" className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-md flex flex-col justify-between">
               <div className="mb-5">
-                <h2 className="text-lg font-bold text-white tracking-tight">Barang Paling Laris</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Ranking berdasarkan volume penjualan</p>
+                <h2 className="text-lg font-bold text-slate-800 tracking-tight">Barang Paling Laris</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Ranking berdasarkan volume penjualan</p>
               </div>
 
               {/* List Item Ranks */}
@@ -456,54 +456,54 @@ export default function AnalitikTab({
                       key={idx} 
                       className={`p-3.5 rounded-xl border relative overflow-hidden transition-all duration-300 ${
                         isRank1 
-                          ? 'bg-slate-900/40 border-amber-500/20 shadow-lg shadow-amber-500/5' 
-                          : 'bg-slate-900/20 border-slate-800 hover:border-slate-700'
+                          ? 'bg-amber-50/50 border-amber-200/60 shadow-sm' 
+                          : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 hover:bg-slate-50'
                       }`}
                     >
                       {isRank1 && (
-                        <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-500/10 to-transparent w-24 h-full pointer-events-none"></div>
+                        <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-500/5 to-transparent w-24 h-full pointer-events-none"></div>
                       )}
                       <div className="flex justify-between items-start mb-1.5">
                         <div className="min-w-0 flex-1">
                           <span className={`text-xs font-bold uppercase tracking-wider mr-1.5 ${
-                            isRank1 ? 'text-amber-400' : isRank2 ? 'text-slate-400' : isRank3 ? 'text-amber-700/80' : 'text-slate-500'
+                            isRank1 ? 'text-amber-600' : isRank2 ? 'text-slate-400' : isRank3 ? 'text-amber-700/80' : 'text-slate-500'
                           }`}>
                             #{idx + 1}
                           </span>
-                          <span className="text-sm font-semibold text-white truncate max-w-[150px] inline-block align-middle">
+                          <span className="text-sm font-semibold text-slate-800 truncate max-w-[150px] inline-block align-middle">
                             {item.name}
                           </span>
                         </div>
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-md border ${
                           isRank1 
-                            ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' 
-                            : 'text-slate-300 bg-slate-800 border-slate-700'
+                            ? 'text-amber-700 bg-amber-50 border-amber-200/60' 
+                            : 'text-slate-600 bg-slate-100 border-slate-200/60'
                         }`}>
                           {item.qty} Pcs
                         </span>
                       </div>
-                      <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mb-1">
+                      <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-1">
                         <div 
                           className={`h-full rounded-full transition-all duration-500 ${
                             isRank1 
                               ? 'bg-gradient-to-r from-amber-500 to-yellow-400' 
                               : isRank2
                               ? 'bg-slate-400'
-                              : 'bg-slate-600'
+                              : 'bg-slate-300'
                           }`} 
                           style={{ width: `${pct}%` }}
                         ></div>
                       </div>
-                      <div className="flex justify-between text-[11px] text-slate-400">
+                      <div className="flex justify-between text-[11px] text-slate-500">
                         <span>Total Nilai Omset</span>
-                        <span className="font-medium text-slate-300">{formatPrice(item.revenue)}</span>
+                        <span className="font-semibold text-slate-600">{formatPrice(item.revenue)}</span>
                       </div>
                     </div>
                   );
                 })}
 
                 {bestSellers.length === 0 && (
-                  <div className="py-12 text-center text-xs text-slate-400">
+                  <div className="py-12 text-center text-xs text-slate-500">
                     Belum ada data barang laku. Lakukan transaksi penjualan terlebih dahulu!
                   </div>
                 )}
@@ -514,27 +514,27 @@ export default function AnalitikTab({
           {/* Stock Distribution per Category Panel */}
           <div 
             id="category_stock_distribution_panel" 
-            className="w-full bg-[#0b0f19] text-slate-200 rounded-3xl p-6 sm:p-8 border border-white/5 shadow-2xl relative overflow-hidden font-sans"
+            className="w-full bg-white text-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-md relative overflow-hidden font-sans"
           >
             {/* Glow Effects */}
-            <div className="absolute -top-24 -left-24 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute -top-24 -left-24 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-sky-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
             {/* Header Dashboard */}
-            <div className="flex items-start justify-between mb-8 border-b border-slate-800 pb-6 relative z-10">
+            <div className="flex items-start justify-between mb-8 border-b border-slate-100 pb-6 relative z-10">
               <div>
                 <div className="flex items-center gap-3 mb-1">
-                  <div className="p-2.5 bg-purple-500/10 rounded-xl text-purple-400">
+                  <div className="p-2.5 bg-cyan-50 rounded-xl text-cyan-600">
                     <Package className="h-6 w-6" />
                   </div>
-                  <h3 className="text-lg sm:text-xl font-extrabold tracking-tight text-white">Distribusi Stok per Kategori</h3>
+                  <h3 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-800">Distribusi Stok per Kategori</h3>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-400 ml-12">Melihat volume total persediaan barang per kategori produk</p>
+                <p className="text-xs sm:text-sm text-slate-500 ml-12">Melihat volume total persediaan barang per kategori produk</p>
               </div>
             </div>
 
             {categoryStockData.length === 0 ? (
-              <div className="py-12 text-center text-xs text-slate-400 relative z-10">
+              <div className="py-12 text-center text-xs text-slate-500 relative z-10">
                 Belum ada data stok barang. Tambahkan produk ke inventori terlebih dahulu!
               </div>
             ) : (
@@ -542,9 +542,9 @@ export default function AnalitikTab({
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
                 
                 {/* Area Grafik Batang */}
-                <div className="lg:col-span-2 bg-[#161c2d]/40 rounded-2xl p-6 border border-white/5 flex flex-col justify-between min-h-[350px]">
+                <div className="lg:col-span-2 bg-slate-50/50 rounded-2xl p-6 border border-slate-200/60 flex flex-col justify-between min-h-[350px]">
                   <div className="mb-3">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Visualisasi Volume</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Visualisasi Volume</span>
                   </div>
                   <div className="h-[280px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
@@ -554,23 +554,23 @@ export default function AnalitikTab({
                       >
                         <defs>
                           <linearGradient id="gradientMinuman" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#6366f1" />
-                            <stop offset="100%" stopColor="#a855f7" stopOpacity={0.1} />
+                            <stop offset="0%" stopColor="#0284c7" />
+                            <stop offset="100%" stopColor="#0284c7" stopOpacity={0.1} />
                           </linearGradient>
                           <linearGradient id="gradientMakanan" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#a855f7" />
-                            <stop offset="100%" stopColor="#ec4899" stopOpacity={0.1} />
+                            <stop offset="0%" stopColor="#0891b2" />
+                            <stop offset="100%" stopColor="#0891b2" stopOpacity={0.1} />
                           </linearGradient>
                           <linearGradient id="gradientCemilan" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#ec4899" />
-                            <stop offset="100%" stopColor="#f43f5e" stopOpacity={0.1} />
+                            <stop offset="0%" stopColor="#059669" />
+                            <stop offset="100%" stopColor="#059669" stopOpacity={0.1} />
                           </linearGradient>
                           <linearGradient id="gradientOthers" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#334155" />
-                            <stop offset="100%" stopColor="#1e293b" stopOpacity={0.1} />
+                            <stop offset="0%" stopColor="#475569" />
+                            <stop offset="100%" stopColor="#475569" stopOpacity={0.1} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
                         <XAxis 
                           dataKey="name" 
                           stroke="#64748b" 
@@ -585,7 +585,7 @@ export default function AnalitikTab({
                           axisLine={false} 
                           allowDecimals={false}
                         />
-                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)', radius: 12 }} />
+                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.02)', radius: 12 }} />
                         <Bar 
                           dataKey="stock" 
                           radius={[12, 12, 0, 0]} 
@@ -598,7 +598,7 @@ export default function AnalitikTab({
                               <Cell 
                                 key={`cell-${index}`} 
                                 fill={fill}
-                                stroke={index === 0 ? '#818cf8' : index === 1 ? '#c084fc' : index === 2 ? '#f472b6' : '#475569'}
+                                stroke={index === 0 ? '#0284c7' : index === 1 ? '#0891b2' : index === 2 ? '#059669' : '#475569'}
                                 strokeWidth={1.5}
                                 className="transition-all duration-300 hover:opacity-100"
                               />
@@ -615,22 +615,22 @@ export default function AnalitikTab({
                   {/* Grid Dua Kartu Atas */}
                   <div className="grid grid-cols-2 gap-4">
                     {/* Kartu Total Stok */}
-                    <div className="bg-[#161c2d]/60 backdrop-blur-md border border-white/5 p-5 rounded-2xl border-l-4 border-blue-500 shadow-lg">
-                      <p className="text-[10px] sm:text-xs font-semibold text-slate-400 tracking-wider uppercase mb-1">Total Stok Toko</p>
+                    <div className="bg-slate-50/50 border border-slate-200/60 p-5 rounded-2xl border-l-4 border-sky-500 shadow-sm">
+                      <p className="text-[10px] sm:text-xs font-semibold text-slate-500 tracking-wider uppercase mb-1">Total Stok Toko</p>
                       <div className="flex items-baseline gap-2">
-                        <span className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-mono">{totalAllStock.toLocaleString('id-ID')}</span>
-                        <span className="text-xs font-medium text-slate-400">Unit</span>
+                        <span className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight font-mono">{totalAllStock.toLocaleString('id-ID')}</span>
+                        <span className="text-xs font-medium text-slate-500">Unit</span>
                       </div>
                     </div>
 
                     {/* Kartu Kategori Terbanyak */}
-                    <div className="bg-[#161c2d]/60 backdrop-blur-md border border-white/5 p-5 rounded-2xl border-l-4 border-purple-500 shadow-lg">
-                      <p className="text-[10px] sm:text-xs font-semibold text-slate-400 tracking-wider uppercase mb-1">Kategori Terbanyak</p>
-                      <p className="text-base sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 truncate">
+                    <div className="bg-slate-50/50 border border-slate-200/60 p-5 rounded-2xl border-l-4 border-cyan-500 shadow-sm">
+                      <p className="text-[10px] sm:text-xs font-semibold text-slate-500 tracking-wider uppercase mb-1">Kategori Terbanyak</p>
+                      <p className="text-base sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-cyan-500 truncate">
                         {dominantCategory?.name || '-'}
                       </p>
                       {dominantCategory && totalAllStock > 0 && (
-                        <p className="text-[10px] text-purple-400/80 mt-1">
+                        <p className="text-[10px] text-cyan-600 mt-1">
                           {Math.round((dominantCategory.stock / totalAllStock) * 100)}% dari total stok
                         </p>
                       )}
@@ -638,8 +638,8 @@ export default function AnalitikTab({
                   </div>
 
                   {/* List Detail Porsi Stok per Kategori */}
-                  <div className="bg-[#161c2d]/60 backdrop-blur-md border border-white/5 p-5 rounded-2xl space-y-4">
-                    <h3 className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-2">Porsi Stok per Kategori</h3>
+                  <div className="bg-slate-50/50 border border-slate-200/60 p-5 rounded-2xl space-y-4">
+                    <h3 className="text-xs font-bold text-slate-500 tracking-wider uppercase mb-2">Porsi Stok per Kategori</h3>
                     
                     <div className="space-y-4 max-h-[220px] overflow-y-auto pr-1">
                       {categoryStockData.map((item, index) => {
@@ -647,32 +647,32 @@ export default function AnalitikTab({
                         
                         // Inline color functions
                         const getGradientClass = (idx: number) => {
-                          if (idx === 0) return 'from-indigo-500 to-purple-500';
-                          if (idx === 1) return 'from-purple-500 to-pink-500';
-                          if (idx === 2) return 'from-pink-500 to-rose-400';
+                          if (idx === 0) return 'from-sky-500 to-sky-400';
+                          if (idx === 1) return 'from-cyan-500 to-cyan-400';
+                          if (idx === 2) return 'from-emerald-500 to-emerald-400';
                           return 'from-slate-600 to-slate-500';
                         };
 
                         const getDotColorClass = (idx: number) => {
-                          if (idx === 0) return 'bg-indigo-500';
-                          if (idx === 1) return 'bg-purple-500';
-                          if (idx === 2) return 'bg-pink-500';
+                          if (idx === 0) return 'bg-sky-500';
+                          if (idx === 1) return 'bg-cyan-500';
+                          if (idx === 2) return 'bg-emerald-500';
                           return 'bg-slate-500';
                         };
 
                         return (
                           <div key={index} className="space-y-1">
                             <div className="flex justify-between text-xs sm:text-sm">
-                              <span className="flex items-center gap-2 text-slate-300 font-medium">
+                              <span className="flex items-center gap-2 text-slate-600 font-medium">
                                 <span className={`w-2.5 h-2.5 rounded-full ${getDotColorClass(index)}`}></span> 
                                 <span className="truncate max-w-[130px] sm:max-w-[150px]">{item.name}</span>
                               </span>
-                              <span className="font-semibold text-white font-mono">
+                              <span className="font-semibold text-slate-800 font-mono">
                                 {item.stock.toLocaleString('id-ID')}{' '}
-                                <span className="text-[10px] text-slate-400 font-normal">({percentage}%)</span>
+                                <span className="text-[10px] text-slate-500 font-normal">({percentage}%)</span>
                               </span>
                             </div>
-                            <div className="w-full bg-slate-800/60 h-2 rounded-full overflow-hidden">
+                            <div className="w-full bg-slate-200/60 h-2 rounded-full overflow-hidden">
                               <div 
                                 className={`bg-gradient-to-r ${getGradientClass(index)} h-full rounded-full transition-all duration-500`} 
                                 style={{ width: `${percentage}%` }}
@@ -693,30 +693,30 @@ export default function AnalitikTab({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
             
             {/* Panel 1: Analisis Stok Menipis */}
-            <div className="bg-[#131a2a]/60 backdrop-blur-md border border-white/5 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md flex flex-col justify-between">
               <div>
-                <div className="flex items-center gap-3 mb-2 pb-4 border-b border-white/5">
-                  <div className="p-2.5 bg-rose-500/10 rounded-xl text-rose-400">
+                <div className="flex items-center gap-3 mb-2 pb-4 border-b border-slate-100">
+                  <div className="p-2.5 bg-rose-50 rounded-xl text-rose-600">
                     <AlertTriangle className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white tracking-tight">Analisis Stok Menipis ({lowStockProducts.length})</h3>
-                    <p className="text-[11px] text-slate-400">Barang dengan stok di bawah limit minimum peringatan</p>
+                    <h3 className="text-sm font-bold text-slate-800 tracking-tight">Analisis Stok Menipis ({lowStockProducts.length})</h3>
+                    <p className="text-[11px] text-slate-500">Barang dengan stok di bawah limit minimum peringatan</p>
                   </div>
                 </div>
 
                 <div className="space-y-3.5 mt-4 max-h-[250px] overflow-y-auto pr-1">
                   {lowStockProducts.map((p) => (
-                    <div key={p.id} className="flex justify-between items-center p-3 rounded-xl bg-slate-900/40 border border-white/5 hover:border-rose-500/20 transition-all">
+                    <div key={p.id} className="flex justify-between items-center p-3 rounded-xl bg-slate-50/50 border border-slate-100 hover:border-rose-200 hover:bg-slate-50 transition-all">
                       <div className="min-w-0 flex-1 pr-3">
-                        <p className="text-xs font-semibold text-white truncate">{p.name}</p>
-                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">SKU: {p.code} • Kategori: {p.category}</p>
+                        <p className="text-xs font-semibold text-slate-800 truncate">{p.name}</p>
+                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">SKU: {p.code} • Kategori: {p.category}</p>
                       </div>
                       <div className="text-right">
-                        <span className="text-xs font-bold text-rose-400 font-mono block">
-                          {p.stock} <span className="text-[10px] text-slate-400 font-normal">/ {p.minStock} {p.satuanJual || 'Pcs'}</span>
+                        <span className="text-xs font-bold text-rose-600 font-mono block">
+                          {p.stock} <span className="text-[10px] text-slate-500 font-normal">/ {p.minStock} {p.satuanJual || 'Pcs'}</span>
                         </span>
-                        <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-1.5 py-0.5 rounded-md font-bold mt-1 inline-block uppercase tracking-wider">
+                        <span className="text-[9px] bg-rose-50 text-rose-600 border border-rose-100 px-1.5 py-0.5 rounded-md font-bold mt-1 inline-block uppercase tracking-wider">
                           Isi Ulang
                         </span>
                       </div>
@@ -724,7 +724,7 @@ export default function AnalitikTab({
                   ))}
 
                   {lowStockProducts.length === 0 && (
-                    <div className="py-12 text-center text-xs text-slate-300 font-medium">
+                    <div className="py-12 text-center text-xs text-slate-500 font-medium">
                       👍 Semua stok barang dalam keadaan aman & cukup!
                     </div>
                   )}
@@ -733,15 +733,15 @@ export default function AnalitikTab({
             </div>
 
             {/* Panel 2: Analisis Produk Kadaluarsa */}
-            <div className="bg-[#131a2a]/60 backdrop-blur-md border border-white/5 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md flex flex-col justify-between">
               <div>
-                <div className="flex items-center gap-3 mb-2 pb-4 border-b border-white/5">
-                  <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-400">
+                <div className="flex items-center gap-3 mb-2 pb-4 border-b border-slate-100">
+                  <div className="p-2.5 bg-amber-50 rounded-xl text-amber-600">
                     <BellRing className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white tracking-tight">Analisis Kadaluarsa ({nearExpiryProducts.length})</h3>
-                    <p className="text-[11px] text-slate-400">Barang mendekati tanggal kadaluarsa dalam 30 hari</p>
+                    <h3 className="text-sm font-bold text-slate-800 tracking-tight">Analisis Kadaluarsa ({nearExpiryProducts.length})</h3>
+                    <p className="text-[11px] text-slate-500">Barang mendekati tanggal kadaluarsa dalam 30 hari</p>
                   </div>
                 </div>
 
@@ -752,16 +752,16 @@ export default function AnalitikTab({
                       : 0;
 
                     return (
-                      <div key={p.id} className="flex justify-between items-center p-3 rounded-xl bg-slate-900/40 border border-white/5 hover:border-amber-500/20 transition-all">
+                      <div key={p.id} className="flex justify-between items-center p-3 rounded-xl bg-slate-50/50 border border-slate-100 hover:border-amber-200 hover:bg-slate-50 transition-all">
                         <div className="min-w-0 flex-1 pr-3">
-                          <p className="text-xs font-semibold text-white truncate">{p.name}</p>
-                          <p className="text-[10px] text-slate-400 font-mono mt-0.5">Exp: {p.expiryDate ? formatDate(p.expiryDate) : '-'}</p>
+                          <p className="text-xs font-semibold text-slate-800 truncate">{p.name}</p>
+                          <p className="text-[10px] text-slate-500 font-mono mt-0.5">Exp: {p.expiryDate ? formatDate(p.expiryDate) : '-'}</p>
                         </div>
                         <div className="text-right">
-                          <span className={`text-xs font-bold font-mono block ${daysLeft <= 7 ? 'text-rose-400' : 'text-amber-400'}`}>
+                          <span className={`text-xs font-bold font-mono block ${daysLeft <= 7 ? 'text-rose-600' : 'text-amber-600'}`}>
                             {daysLeft <= 0 ? 'Kedaluwarsa' : `${daysLeft} Hari Lagi`}
                           </span>
-                          <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded-md font-bold mt-1 inline-block uppercase tracking-wider">
+                          <span className="text-[9px] bg-amber-50 text-amber-600 border border-amber-100 px-1.5 py-0.5 rounded-md font-bold mt-1 inline-block uppercase tracking-wider">
                             Diskon / Retur
                           </span>
                         </div>
@@ -770,7 +770,7 @@ export default function AnalitikTab({
                   })}
 
                   {nearExpiryProducts.length === 0 && (
-                    <div className="py-12 text-center text-xs text-slate-300 font-medium">
+                    <div className="py-12 text-center text-xs text-slate-500 font-medium">
                       ✨ Tidak ada produk yang mendekati tanggal kadaluarsa.
                     </div>
                   )}
@@ -798,12 +798,12 @@ export default function AnalitikTab({
                 placeholder="Cari nomor faktur invoice atau nama pelanggan..."
                 value={historySearch}
                 onChange={(e) => setHistorySearch(e.target.value)}
-                className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-2.5 pl-9 pr-4 text-xs font-medium outline-none transition-all"
+                className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-xl py-2.5 pl-9 pr-4 text-xs font-medium outline-none transition-all"
               />
             </div>
             {/* Total Transaksi Badge */}
             <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl">
-              Menampilkan <span className="text-blue-600 font-bold">{filteredHistories.length}</span> transaksi penjualan
+              Menampilkan <span className="text-cyan-600 font-bold">{filteredHistories.length}</span> transaksi penjualan
             </span>
           </div>
 
@@ -891,15 +891,15 @@ export default function AnalitikTab({
           <div className="bg-white text-slate-950 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-100 flex flex-col animate-scaleIn">
             
             {/* Header Modal Premium */}
-            <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-sky-600 via-cyan-500 to-emerald-500 text-white p-5 flex items-center justify-between">
               <div>
                 <h2 className="text-sm font-bold tracking-tight">Detail Faktur Invoice</h2>
-                <p className="text-[11px] text-slate-400 font-mono mt-0.5">{selectedTxDetail.invoiceNumber}</p>
+                <p className="text-[11px] text-sky-100 font-mono mt-0.5">{selectedTxDetail.invoiceNumber}</p>
               </div>
               <button
                 id="close_tx_detail_modal"
                 onClick={() => setSelectedTxDetail(null)}
-                className="text-slate-400 hover:text-white p-1.5 active:scale-90 rounded-lg transition-colors cursor-pointer"
+                className="text-white/80 hover:text-white p-1.5 active:scale-90 rounded-lg transition-colors cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1024,7 +1024,7 @@ export default function AnalitikTab({
                 <button
                   id="print_tx_detail_btn"
                   onClick={() => window.print()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold py-3 px-4 rounded-xl shadow-md shadow-blue-500/10 hover:shadow-lg transition-all flex items-center justify-center gap-2 order-last sm:order-first active:scale-[0.98] cursor-pointer"
+                  className="bg-gradient-to-r from-sky-600 to-cyan-500 hover:opacity-90 text-white text-xs font-extrabold py-3 px-4 rounded-xl shadow-md shadow-cyan-500/10 hover:shadow-lg transition-all flex items-center justify-center gap-2 order-last sm:order-first active:scale-[0.98] cursor-pointer"
                 >
                   <Printer className="h-4 w-4 text-white shrink-0" />
                   <span>Cetak Nota</span>

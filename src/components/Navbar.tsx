@@ -69,8 +69,17 @@ export default function Navbar({
         {/* BAGIAN KIRI: BRANDING & IDENTITAS SISTEM */}
         <div className="flex items-center gap-4">
           {/* Icon Toko Berbingkai */}
-          <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center shadow-md shadow-slate-900/10 shrink-0">
-            <Store className="h-5 w-5 text-white" />
+          <div className="w-10 h-10 bg-gradient-to-br from-sky-600 via-cyan-500 to-emerald-500 text-white rounded-xl flex items-center justify-center shadow-md shadow-cyan-500/10 shrink-0 overflow-hidden">
+            {shopSettings.logoUrl ? (
+              <img 
+                src={shopSettings.logoUrl} 
+                alt="Logo Toko" 
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-contain bg-white p-0.5" 
+              />
+            ) : (
+              <Store className="h-5 w-5 text-white" />
+            )}
           </div>
           {/* Nama & Subtitle Toko */}
           <div className="leading-tight">
@@ -96,7 +105,7 @@ export default function Navbar({
                 }}
                 className={`text-xs flex items-center gap-2 px-4 py-2 rounded-lg transition-all active:scale-[0.98] relative cursor-pointer ${
                   isActive 
-                    ? 'bg-slate-900 text-white font-extrabold shadow-md shadow-slate-950/10' 
+                    ? 'bg-gradient-to-r from-sky-600 via-cyan-500 to-emerald-500 text-white font-extrabold shadow-md shadow-cyan-500/10' 
                     : 'text-slate-600 hover:text-slate-900 font-bold hover:bg-slate-200/50'
                 }`}
               >
@@ -124,13 +133,13 @@ export default function Navbar({
           {/* Informasi Profil Akun Pengguna */}
           <div className="hidden sm:flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-xl py-1.5 pl-2 pr-3.5 shadow-sm">
             {/* Avatar Profil Singkat */}
-            <div className="w-7 h-7 bg-blue-600 text-white rounded-lg flex items-center justify-center text-xs font-extrabold shadow-sm shadow-blue-600/10 uppercase">
+            <div className="w-7 h-7 bg-gradient-to-br from-sky-600 to-cyan-500 text-white rounded-lg flex items-center justify-center text-xs font-extrabold shadow-sm shadow-cyan-500/10 uppercase">
               {(currentUser.fullName || currentUser.username || 'O')[0]}
             </div>
             {/* Detail Nama & Role Status */}
             <div className="leading-none text-left">
               <span className="text-xs font-bold text-slate-800 block truncate max-w-[100px]">{currentUser.fullName}</span>
-              <span className="inline-block text-[8px] font-extrabold uppercase tracking-widest text-blue-600 mt-1">
+              <span className="inline-block text-[8px] font-extrabold uppercase tracking-widest text-cyan-600 mt-1">
                 {currentUser.role === 'OWNER' ? 'Owner' : 'Kasir'}
               </span>
             </div>
@@ -185,7 +194,7 @@ export default function Navbar({
                   }}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all relative cursor-pointer ${
                     isActive 
-                      ? 'bg-slate-950 text-white shadow-sm' 
+                      ? 'bg-gradient-to-r from-sky-600 via-cyan-500 to-emerald-500 text-white shadow-sm' 
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
@@ -205,7 +214,7 @@ export default function Navbar({
           {/* Mobile Profile & Logout */}
           <div className="border-t border-slate-100 pt-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold text-xs uppercase shadow-sm">
+              <div className="w-8 h-8 bg-gradient-to-br from-sky-600 to-cyan-500 text-white rounded-lg flex items-center justify-center font-bold text-xs uppercase shadow-sm">
                 {(currentUser.fullName || currentUser.username || 'O')[0]}
               </div>
               <div className="text-left">

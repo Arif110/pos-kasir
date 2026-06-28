@@ -25,7 +25,9 @@ import {
   X,
   Eye,
   EyeOff,
-  ShieldAlert
+  ShieldAlert,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { Product, CartItem, Transaction, Debt, ShopSettings } from '../types';
 
@@ -78,6 +80,118 @@ export default function KasirTab({
   const [customerPhone, setCustomerPhone] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [transactionNotes, setTransactionNotes] = useState('');
+  
+  // Voice & Sound feedback states
+  const [audioFeedback, setAudioFeedback] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('kasir_audio_feedback') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('kasir_audio_feedback', String(audioFeedback));
+    } catch (e) {}
+  }, [audioFeedback]);
+
+  // Preload Indonesian Speech voices
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.getVoices();
+      const handleVoicesChanged = () => {
+        if (window.speechSynthesis) {
+          window.speechSynthesis.getVoices();
+        }
+      };
+      window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
+      return () => {
+        window.speechSynthesis?.removeEventListener('voiceschanged', handleVoicesChanged);
+      };
+    }
+  }, []);
+
+  const playPaymentVoiceAndSound = (type: 'CASH' | 'QRIS' | 'DEBT', total: number, paidAmount: number, change: number, customer: string) => {
+    // 1. Play synthesized cash register chime (using Web Audio API)
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        const audioCtx = new AudioCtx();
+        
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(1046.50, audioCtx.currentTime); // C6 note
+        osc1.frequency.setValueAtTime(1318.51, audioCtx.currentTime + 0.08); // E6 note
+        
+        gain1.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+        
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        
+        osc1.start();
+        osc1.stop(audioCtx.currentTime + 0.4);
+
+        // Metallic coin drop simulation
+        setTimeout(() => {
+          try {
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.type = 'triangle';
+            osc2.frequency.setValueAtTime(2093.00, audioCtx.currentTime); // C7 note
+            osc2.frequency.exponentialRampToValueAtTime(3135.96, audioCtx.currentTime + 0.15); // G7 note
+            
+            gain2.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+            
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            
+            osc2.start();
+            osc2.stop(audioCtx.currentTime + 0.3);
+          } catch (e) {}
+        }, 75);
+      }
+    } catch (e) {
+      console.warn("Audio Context is not supported or was blocked by browser autoplay policy.");
+    }
+
+    // 2. Text-to-Speech feedback (Indonesian language native)
+    if (!window.speechSynthesis) return;
+    
+    let speechText = "";
+    if (type === 'CASH') {
+      speechText = `Transaksi tunai sebesar ${total} rupiah berhasil diterima. `;
+      if (change > 0) {
+        speechText += `Sisa kembalian ${change} rupiah. `;
+      }
+      speechText += "Terima kasih banyak!";
+    } else if (type === 'QRIS') {
+      speechText = `Transaksi QRIS sebesar ${total} rupiah sukses. Terima kasih banyak!`;
+    } else if (type === 'DEBT') {
+      speechText = `Transaksi utang sebesar ${total} rupiah berhasil dicatat atas nama ${customer || 'pelanggan'}.`;
+    }
+
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(speechText);
+      utterance.lang = 'id-ID';
+      utterance.rate = 1.05;
+      utterance.pitch = 1.0;
+
+      // Ensure id-ID voice selection
+      const voices = window.speechSynthesis.getVoices();
+      const idVoice = voices.find(v => v.lang.startsWith('id') || v.lang.includes('ID'));
+      if (idVoice) {
+        utterance.voice = idVoice;
+      }
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn("Speech Synthesis failed:", e);
+    }
+  };
   
   // Toast states for stock alerts
   const [stockAlerts, setStockAlerts] = useState<StockAlertToast[]>([]);
@@ -420,7 +534,7 @@ export default function KasirTab({
     const printTargetUrl = shopSettings.localPrintUrl || 'http://localhost:3000/print';
 
     const dataStruk = {
-      toko: shopSettings.shopName || "UD TOSERBA FAZZ FAZZ",
+      toko: shopSettings.shopName || "UD TOSERBA",
       item: invoice.items.map(item => `${item.name} x${item.quantity}`).join(', '),
       total: invoice.total.toLocaleString('id-ID'),
       bayar: invoice.amountPaid?.toLocaleString('id-ID') || invoice.total.toLocaleString('id-ID'),
@@ -641,6 +755,17 @@ export default function KasirTab({
 
     if (lowStockItems.length > 0) {
       setStockAlerts(prev => [...prev, ...lowStockItems]);
+    }
+
+    // Play payment success voice and chime
+    if (audioFeedback) {
+      playPaymentVoiceAndSound(
+        paymentType,
+        total,
+        invoiceAmountPaid,
+        change,
+        customerName.trim()
+      );
     }
 
     // Trigger Invoice View
@@ -972,7 +1097,7 @@ export default function KasirTab({
               <button
                 id="barcode_submit_btn"
                 type="submit"
-                className="px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-colors flex items-center justify-center"
+                className="px-4 bg-gradient-to-r from-sky-600 to-cyan-500 hover:opacity-95 text-white rounded-lg text-xs font-bold shadow-sm shadow-cyan-500/5 transition-all flex items-center justify-center"
                 title="Masukkan Barcode"
               >
                 Cari
@@ -1006,7 +1131,7 @@ export default function KasirTab({
                   onClick={() => setSelectedCategory(cat)}
                   className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border cursor-pointer ${
                     selectedCategory === cat
-                      ? 'bg-slate-950 text-white border-slate-950 shadow-sm font-extrabold scale-[1.02]'
+                      ? 'bg-gradient-to-r from-sky-600 via-cyan-500 to-emerald-500 text-white border-transparent shadow-md shadow-cyan-500/10 font-extrabold scale-[1.02]'
                       : 'bg-slate-50 text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-100 hover:border-slate-300'
                   }`}
                 >
@@ -1197,6 +1322,32 @@ export default function KasirTab({
             </span>
           </div>
 
+          <div className="flex items-center justify-between pt-1 pb-2 border-b border-slate-100/50">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Asisten Suara Kasir</span>
+            <button
+              type="button"
+              onClick={() => setAudioFeedback(!audioFeedback)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border active:scale-95 cursor-pointer ${
+                audioFeedback 
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm shadow-emerald-500/5'
+                  : 'bg-slate-50 border-slate-200 text-slate-500'
+              }`}
+              title="Aktifkan/nonaktifkan asisten suara pembayaran otomatis"
+            >
+              {audioFeedback ? (
+                <>
+                  <Volume2 className="w-3.5 h-3.5 animate-pulse text-emerald-600" />
+                  <span>Suara Aktif</span>
+                </>
+              ) : (
+                <>
+                  <VolumeX className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Suara Senyap</span>
+                </>
+              )}
+            </button>
+          </div>
+
           {cart.length > 0 && (
             <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-3">
               {/* Payment Type Tabs */}
@@ -1208,7 +1359,7 @@ export default function KasirTab({
                     onClick={() => setPaymentType('CASH')}
                     className={`flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all border active:scale-[0.98] cursor-pointer ${
                       paymentType === 'CASH'
-                        ? 'bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-950/5'
+                        ? 'bg-gradient-to-r from-sky-600 via-cyan-500 to-emerald-500 text-white border-transparent shadow-md shadow-cyan-500/10 font-extrabold'
                         : 'bg-white border-slate-250 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
@@ -1220,7 +1371,7 @@ export default function KasirTab({
                     onClick={() => setPaymentType('QRIS')}
                     className={`flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all border active:scale-[0.98] cursor-pointer ${
                       paymentType === 'QRIS'
-                        ? 'bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-950/5'
+                        ? 'bg-gradient-to-r from-sky-600 via-cyan-500 to-emerald-500 text-white border-transparent shadow-md shadow-cyan-500/10 font-extrabold'
                         : 'bg-white border-slate-250 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
@@ -1232,7 +1383,7 @@ export default function KasirTab({
                     onClick={() => setPaymentType('DEBT')}
                     className={`flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all border active:scale-[0.98] cursor-pointer ${
                       paymentType === 'DEBT'
-                        ? 'bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-950/5'
+                        ? 'bg-gradient-to-r from-sky-600 via-cyan-500 to-emerald-500 text-white border-transparent shadow-md shadow-cyan-500/10 font-extrabold'
                         : 'bg-white border-slate-250 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
@@ -1404,7 +1555,7 @@ export default function KasirTab({
         <div id="invoice_modal" className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white text-slate-900 w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
             {/* Header visual */}
-            <div className="bg-slate-950 p-5 text-center text-white flex flex-col items-center">
+            <div className="bg-gradient-to-r from-sky-600 via-cyan-500 to-emerald-500 p-5 text-center text-white flex flex-col items-center">
               <div className="w-10 h-10 bg-white/15 rounded-full flex items-center justify-center mb-1">
                 <CheckCircle2 className="w-5 h-5 text-emerald-400" />
               </div>
@@ -1774,7 +1925,7 @@ export default function KasirTab({
                 </button>
                 <button
                   onClick={() => setShowLocalPrintError(false)}
-                  className="py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center justify-center transition-all cursor-pointer"
+                  className="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 font-bold rounded-xl text-xs flex items-center justify-center transition-all cursor-pointer"
                 >
                   Tutup Dialog
                 </button>

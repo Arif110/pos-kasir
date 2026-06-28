@@ -660,9 +660,9 @@ export default function StokTab({
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col animate-scaleIn">
             
             {/* Header Modal Premium */}
-            <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-sky-600 via-cyan-500 to-emerald-500 text-white p-5 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
+                <div className="p-2 bg-white/10 text-emerald-300 rounded-xl">
                   <PackagePlus className="h-5 w-5" />
                 </div>
                 <h2 className="text-sm font-bold tracking-tight">
@@ -675,7 +675,7 @@ export default function StokTab({
                   setShowAddModal(false);
                   setShowEditModal(false);
                 }}
-                className="text-slate-400 hover:text-white p-1.5 active:scale-90 rounded-lg transition-colors cursor-pointer"
+                className="text-white/80 hover:text-white p-1.5 active:scale-90 rounded-lg transition-colors cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
