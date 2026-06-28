@@ -5,7 +5,8 @@ import {
   Transaction, 
   Debt, 
   ShopSettings,
-  CashierAccount 
+  CashierAccount,
+  RiwayatPPOB 
 } from './types';
 import { dbService, DEFAULT_SETTINGS } from './lib/firebase';
 import { performAutoBackup } from './lib/autoBackup';
@@ -16,6 +17,7 @@ import StokTab from './components/StokTab';
 import UtangTab from './components/UtangTab';
 import AnalitikTab from './components/AnalitikTab';
 import PengaturanTab from './components/PengaturanTab';
+import PpobTab from './components/PpobTab';
 import { AlertCircle, ShieldCheck } from 'lucide-react';
 
 export default function App() {
@@ -187,12 +189,22 @@ export default function App() {
     setCurrentUser(null);
   };
 
+  const handleResetDebtsData = async () => {
+    await dbService.resetDebtsData();
+  };
+
+  const handleResetPPOBData = async () => {
+    await dbService.clearPPOBTransactions();
+  };
+
   const handleRestoreBackup = async (backupData: {
     settings: ShopSettings;
     products: Product[];
     transactions: Transaction[];
     debts: Debt[];
     cashiers?: CashierAccount[];
+    categories?: string[];
+    ppobTransactions?: RiwayatPPOB[];
   }) => {
     await dbService.restoreBackupData(backupData);
   };
@@ -285,6 +297,10 @@ export default function App() {
           />
         )}
 
+        {activeTab === 'ppob' && (
+          <PpobTab />
+        )}
+
         {currentUser.role === 'OWNER' && activeTab === 'analitik' && (
           <AnalitikTab 
             transactions={transactions} 
@@ -304,6 +320,8 @@ export default function App() {
             categoriesList={categoriesList}
             onSaveSettings={handleSaveSettings}
             onResetAllData={handleResetAllData}
+            onResetDebtsData={handleResetDebtsData}
+            onResetPPOBData={handleResetPPOBData}
             onRestoreBackup={handleRestoreBackup}
             onSaveCashier={handleSaveCashier}
             onDeleteCashier={handleDeleteCashier}

@@ -13,6 +13,7 @@ import {
   Sparkles,
   Phone,
   MapPin,
+  Zap,
   FileText,
   Users,
   UserPlus,
@@ -28,7 +29,7 @@ import {
   SaveAll,
   Shield
 } from 'lucide-react';
-import { ShopSettings, Product, Transaction, Debt, CashierAccount, AutoBackup } from '../types';
+import { ShopSettings, Product, Transaction, Debt, CashierAccount, AutoBackup, RiwayatPPOB } from '../types';
 import ConfirmationModal from './ConfirmationModal';
 import { getAutoBackups, deleteAutoBackup, clearAllAutoBackups, performAutoBackup } from '../lib/autoBackup';
 
@@ -41,6 +42,8 @@ interface PengaturanTabProps {
   categoriesList?: string[];
   onSaveSettings: (settings: ShopSettings) => Promise<void>;
   onResetAllData: () => Promise<void>;
+  onResetDebtsData: () => Promise<void>;
+  onResetPPOBData?: () => Promise<void>;
   onRestoreBackup: (data: {
     settings: ShopSettings;
     products: Product[];
@@ -48,6 +51,7 @@ interface PengaturanTabProps {
     debts: Debt[];
     cashiers?: CashierAccount[];
     categories?: string[];
+    ppobTransactions?: RiwayatPPOB[];
   }) => Promise<void>;
   onSaveCashier: (cashier: CashierAccount) => Promise<void>;
   onDeleteCashier: (id: string) => Promise<void>;
@@ -63,6 +67,8 @@ export default function PengaturanTab({
   categoriesList = [],
   onSaveSettings,
   onResetAllData,
+  onResetDebtsData,
+  onResetPPOBData,
   onRestoreBackup,
   onSaveCashier,
   onDeleteCashier,
@@ -413,6 +419,7 @@ export default function PengaturanTab({
       debts,
       cashiers,
       categories: categoriesList,
+      ppobTransactions: JSON.parse(localStorage.getItem('pos_ppob_transactions') || '[]'),
       exportedAt: new Date().toISOString()
     };
 
@@ -455,7 +462,8 @@ export default function PengaturanTab({
               transactions: parsed.transactions || [],
               debts: parsed.debts || [],
               cashiers: parsed.cashiers || [],
-              categories: parsed.categories || []
+              categories: parsed.categories || [],
+              ppobTransactions: parsed.ppobTransactions || []
             });
             alert('Data berhasil dipulihkan dari file backup! Halaman akan menyegarkan data.');
             window.location.reload();
@@ -490,6 +498,66 @@ export default function PengaturanTab({
             onConfirm: async () => {
               await onResetAllData();
               alert('Sistem berhasil dikosongkan dan dikembalikan ke data awal! Aplikasi akan menyegarkan.');
+              window.location.reload();
+            }
+          });
+        }, 300);
+      }
+    });
+  };
+
+  // SYSTEM RESET CATATAN UTANG
+  const handleResetDebts = () => {
+    triggerConfirm({
+      title: 'RESET CATATAN UTANG',
+      message: 'PERINGATAN: Apakah Anda yakin ingin menghapus SELURUH catatan utang pelanggan? Tindakan ini bersifat permanen dan tidak dapat dibatalkan!',
+      confirmText: 'Lanjutkan',
+      type: 'danger',
+      onConfirm: () => {
+        setTimeout(() => {
+          triggerConfirm({
+            title: 'KONFIRMASI AKHIR RESET UTANG',
+            message: 'Seluruh data utang pelanggan akan dihapus. Ketik "UTANG" di bawah ini untuk mengonfirmasi tindakan ini.',
+            confirmText: 'Hapus Catatan Utang',
+            type: 'danger',
+            showInputConfirmation: true,
+            inputPlaceholder: 'Ketik "UTANG" untuk konfirmasi',
+            inputExpectedValue: 'UTANG',
+            onConfirm: async () => {
+              await onResetDebtsData();
+              alert('Seluruh catatan utang berhasil dikosongkan!');
+              window.location.reload();
+            }
+          });
+        }, 300);
+      }
+    });
+  };
+
+  // SYSTEM RESET DATA TRANSAKSI PPOB & DIGITAL
+  const handleResetPPOB = () => {
+    triggerConfirm({
+      title: 'RESET TRANSAKSI PPOB & DIGITAL',
+      message: 'PERINGATAN: Apakah Anda yakin ingin menghapus SELURUH riwayat transaksi digital PPOB (Pulsa, PLN, E-Wallet, dsb.)? Tindakan ini bersifat permanen dan tidak dapat dibatalkan!',
+      confirmText: 'Lanjutkan',
+      type: 'danger',
+      onConfirm: () => {
+        setTimeout(() => {
+          triggerConfirm({
+            title: 'KONFIRMASI AKHIR RESET PPOB',
+            message: 'Seluruh data transaksi digital PPOB akan dihapus. Ketik "PPOB" di bawah ini untuk mengonfirmasi tindakan ini.',
+            confirmText: 'Hapus Riwayat PPOB & Digital',
+            type: 'danger',
+            showInputConfirmation: true,
+            inputPlaceholder: 'Ketik "PPOB" untuk konfirmasi',
+            inputExpectedValue: 'PPOB',
+            onConfirm: async () => {
+              if (onResetPPOBData) {
+                await onResetPPOBData();
+              } else {
+                localStorage.setItem('pos_ppob_transactions', JSON.stringify([]));
+              }
+              alert('Seluruh riwayat transaksi PPOB & Digital berhasil dikosongkan!');
               window.location.reload();
             }
           });
@@ -1348,6 +1416,26 @@ export default function PengaturanTab({
           >
             <RotateCcw className="h-4 w-4" />
             <span>Kosongkan & Reset Data</span>
+          </button>
+
+          <button
+            id="reset_debts_btn"
+            type="button"
+            onClick={handleResetDebts}
+            className="w-full py-2.5 bg-rose-100 hover:bg-rose-200 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-[0.98]"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span>Reset Catatan Utang</span>
+          </button>
+
+          <button
+            id="reset_ppob_btn"
+            type="button"
+            onClick={handleResetPPOB}
+            className="w-full py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-[0.98]"
+          >
+            <Zap className="h-4 w-4 text-amber-500" />
+            <span>Reset Transaksi PPOB & Digital</span>
           </button>
         </div>
 

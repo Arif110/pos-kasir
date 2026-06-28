@@ -1,4 +1,11 @@
-import { Product, Transaction, Debt, ShopSettings, CashierAccount } from '../types';
+import { Product, Transaction, Debt, ShopSettings, CashierAccount, RiwayatPPOB } from '../types';
+import { initializeApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+import firebaseConfig from '../../firebase-applet-config.json';
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
 // DEFAULT SEED DATA
 export const DEFAULT_CATEGORIES: string[] = [
@@ -72,6 +79,7 @@ let debtListeners: Listener<Debt[]>[] = [];
 let settingsListeners: Listener<ShopSettings>[] = [];
 let cashierListeners: Listener<CashierAccount[]>[] = [];
 let categoryListeners: Listener<string[]>[] = [];
+let ppobListeners: Listener<RiwayatPPOB[]>[] = [];
 
 const notifyProducts = () => {
   const data = getLocalData<Product[]>('pos_products', DEFAULT_PRODUCTS);
@@ -103,6 +111,11 @@ const notifyCategories = () => {
   categoryListeners.forEach(cb => cb(data));
 };
 
+const notifyPPOBTransactions = () => {
+  const data = getLocalData<RiwayatPPOB[]>('pos_ppob_transactions', []);
+  ppobListeners.forEach(cb => cb(data));
+};
+
 // Auto-sync across multiple browser tabs/windows
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e) => {
@@ -118,6 +131,8 @@ if (typeof window !== 'undefined') {
       notifyCashiers();
     } else if (e.key === 'toko_categories') {
       notifyCategories();
+    } else if (e.key === 'pos_ppob_transactions') {
+      notifyPPOBTransactions();
     }
   });
 }
@@ -266,6 +281,7 @@ export const dbService = {
     setLocalData('pos_debts', DEFAULT_DEBTS);
     setLocalData('pos_cashiers', DEFAULT_CASHIERS);
     setLocalData('toko_categories', DEFAULT_CATEGORIES);
+    setLocalData('pos_ppob_transactions', []);
     
     notifyProducts();
     notifyTransactions();
@@ -273,6 +289,13 @@ export const dbService = {
     notifySettings();
     notifyCashiers();
     notifyCategories();
+    notifyPPOBTransactions();
+  },
+
+  // Reset Debts Data
+  resetDebtsData: async (): Promise<void> => {
+    setLocalData('pos_debts', []);
+    notifyDebts();
   },
 
   // Restore Entire Backup
@@ -283,6 +306,7 @@ export const dbService = {
     debts: Debt[];
     cashiers?: CashierAccount[];
     categories?: string[];
+    ppobTransactions?: RiwayatPPOB[];
   }): Promise<void> => {
     setLocalData('pos_settings', backupData.settings);
     setLocalData('pos_products', backupData.products);
@@ -293,6 +317,11 @@ export const dbService = {
     }
     if (backupData.categories) {
       setLocalData('toko_categories', backupData.categories);
+    }
+    if (backupData.ppobTransactions) {
+      setLocalData('pos_ppob_transactions', backupData.ppobTransactions);
+    } else {
+      setLocalData('pos_ppob_transactions', []);
     }
 
     notifySettings();
@@ -305,6 +334,7 @@ export const dbService = {
     if (backupData.categories) {
       notifyCategories();
     }
+    notifyPPOBTransactions();
   },
 
   // Subscribe to Categories
@@ -320,5 +350,28 @@ export const dbService = {
   saveCategories: async (categories: string[]): Promise<void> => {
     setLocalData('toko_categories', categories);
     notifyCategories();
+  },
+
+  // Subscribe to PPOB Transactions
+  subscribePPOBTransactions: (callback: (txs: RiwayatPPOB[]) => void) => {
+    ppobListeners.push(callback);
+    callback(getLocalData<RiwayatPPOB[]>('pos_ppob_transactions', []));
+    return () => {
+      ppobListeners = ppobListeners.filter(cb => cb !== callback);
+    };
+  },
+
+  // Save PPOB Transaction
+  savePPOBTransaction: async (tx: RiwayatPPOB): Promise<void> => {
+    const local = getLocalData<RiwayatPPOB[]>('pos_ppob_transactions', []);
+    local.unshift(tx);
+    setLocalData('pos_ppob_transactions', local);
+    notifyPPOBTransactions();
+  },
+
+  // Clear PPOB Transactions
+  clearPPOBTransactions: async (): Promise<void> => {
+    setLocalData('pos_ppob_transactions', []);
+    notifyPPOBTransactions();
   }
 };

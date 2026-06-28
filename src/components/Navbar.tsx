@@ -10,7 +10,8 @@ import {
   Clock, 
   Menu, 
   X,
-  AlertTriangle
+  AlertTriangle,
+  Zap
 } from 'lucide-react';
 import { UserProfile, ShopSettings } from '../types';
 
@@ -53,6 +54,7 @@ export default function Navbar({
     { id: 'kasir', label: 'Kasir', icon: ShoppingCart, roles: ['OWNER', 'CASHIER'] },
     { id: 'stok', label: 'Stok Barang', icon: Package, roles: ['OWNER', 'CASHIER'] },
     { id: 'utang', label: 'Catatan Utang', icon: FileSpreadsheet, roles: ['OWNER', 'CASHIER'] },
+    { id: 'ppob', label: 'PPOB & Digital', icon: Zap, roles: ['OWNER', 'CASHIER'] },
     { id: 'analitik', label: 'Analitik & Laporan', icon: TrendingUp, roles: ['OWNER'] },
     { id: 'pengaturan', label: 'Pengaturan', icon: Settings, roles: ['OWNER'] },
   ];

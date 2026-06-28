@@ -313,7 +313,7 @@ export default function AnalitikTab({
               <div className="text-2xl font-extrabold text-white tracking-tight mb-2 font-mono">
                 {formatPrice(totalRevenue)}
               </div>
-              <p className="text-[11px] text-slate-500 leading-normal">Akumulasi total omset kotor</p>
+              <p className="text-[11px] text-slate-400 leading-normal">Akumulasi total omset kotor</p>
             </div>
 
             {/* 2. KARTU LABA BERSIH */}
@@ -328,7 +328,7 @@ export default function AnalitikTab({
               <div className="text-2xl font-extrabold text-white tracking-tight mb-2 font-mono">
                 {formatPrice(totalProfit)}
               </div>
-              <p className="text-[11px] text-slate-500 leading-normal">Selisih penjualan minus modal</p>
+              <p className="text-[11px] text-slate-400 leading-normal">Selisih penjualan minus modal</p>
             </div>
 
             {/* 3. KARTU PIUTANG AKTIF */}
@@ -343,7 +343,7 @@ export default function AnalitikTab({
               <div className="text-2xl font-extrabold text-amber-500 tracking-tight mb-2 font-mono">
                 {formatPrice(totalOutstandingDebt)}
               </div>
-              <p className="text-[11px] text-slate-500 leading-normal">Total tagihan utang belum lunas</p>
+              <p className="text-[11px] text-slate-400 leading-normal">Total tagihan utang belum lunas</p>
             </div>
 
             {/* 4. KARTU JUMLAH TRANSAKSI */}
@@ -358,7 +358,7 @@ export default function AnalitikTab({
               <div className="text-2xl font-extrabold text-white tracking-tight mb-2 font-mono">
                 {totalTxCount} <span className="text-lg font-medium text-slate-400">Nota</span>
               </div>
-              <p className="text-[11px] text-slate-500 leading-normal">Total faktur terbit di database</p>
+              <p className="text-[11px] text-slate-400 leading-normal">Total faktur terbit di database</p>
             </div>
 
           </div>
@@ -710,11 +710,11 @@ export default function AnalitikTab({
                     <div key={p.id} className="flex justify-between items-center p-3 rounded-xl bg-slate-900/40 border border-white/5 hover:border-rose-500/20 transition-all">
                       <div className="min-w-0 flex-1 pr-3">
                         <p className="text-xs font-semibold text-white truncate">{p.name}</p>
-                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">SKU: {p.code} • Kategori: {p.category}</p>
+                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">SKU: {p.code} • Kategori: {p.category}</p>
                       </div>
                       <div className="text-right">
                         <span className="text-xs font-bold text-rose-400 font-mono block">
-                          {p.stock} <span className="text-[10px] text-slate-500 font-normal">/ {p.minStock} {p.satuanJual || 'Pcs'}</span>
+                          {p.stock} <span className="text-[10px] text-slate-400 font-normal">/ {p.minStock} {p.satuanJual || 'Pcs'}</span>
                         </span>
                         <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-1.5 py-0.5 rounded-md font-bold mt-1 inline-block uppercase tracking-wider">
                           Isi Ulang
@@ -724,7 +724,7 @@ export default function AnalitikTab({
                   ))}
 
                   {lowStockProducts.length === 0 && (
-                    <div className="py-12 text-center text-xs text-slate-500">
+                    <div className="py-12 text-center text-xs text-slate-300 font-medium">
                       👍 Semua stok barang dalam keadaan aman & cukup!
                     </div>
                   )}
@@ -755,7 +755,7 @@ export default function AnalitikTab({
                       <div key={p.id} className="flex justify-between items-center p-3 rounded-xl bg-slate-900/40 border border-white/5 hover:border-amber-500/20 transition-all">
                         <div className="min-w-0 flex-1 pr-3">
                           <p className="text-xs font-semibold text-white truncate">{p.name}</p>
-                          <p className="text-[10px] text-slate-500 font-mono mt-0.5">Exp: {p.expiryDate ? formatDate(p.expiryDate) : '-'}</p>
+                          <p className="text-[10px] text-slate-400 font-mono mt-0.5">Exp: {p.expiryDate ? formatDate(p.expiryDate) : '-'}</p>
                         </div>
                         <div className="text-right">
                           <span className={`text-xs font-bold font-mono block ${daysLeft <= 7 ? 'text-rose-400' : 'text-amber-400'}`}>
@@ -770,7 +770,7 @@ export default function AnalitikTab({
                   })}
 
                   {nearExpiryProducts.length === 0 && (
-                    <div className="py-12 text-center text-xs text-slate-500">
+                    <div className="py-12 text-center text-xs text-slate-300 font-medium">
                       ✨ Tidak ada produk yang mendekati tanggal kadaluarsa.
                     </div>
                   )}

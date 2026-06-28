@@ -1,4 +1,4 @@
-import { AutoBackup, UserProfile, Product, Transaction, Debt, ShopSettings, CashierAccount } from '../types';
+import { AutoBackup, UserProfile, Product, Transaction, Debt, ShopSettings, CashierAccount, RiwayatPPOB } from '../types';
 import { getLocalData, DEFAULT_SETTINGS, DEFAULT_PRODUCTS, DEFAULT_DEBTS, DEFAULT_CASHIERS, DEFAULT_CATEGORIES } from './firebase';
 
 const BACKUPS_KEY = 'pos_auto_backups';
@@ -13,9 +13,10 @@ export const performAutoBackup = (activeUser: UserProfile | null): void => {
     const debts = getLocalData<Debt[]>('pos_debts', DEFAULT_DEBTS);
     const cashiers = getLocalData<CashierAccount[]>('pos_cashiers', DEFAULT_CASHIERS);
     const categories = getLocalData<string[]>('toko_categories', DEFAULT_CATEGORIES);
+    const ppobTransactions = getLocalData<RiwayatPPOB[]>('pos_ppob_transactions', []);
 
     // If there is no transaction or stock data, skip backing up empty state
-    if (products.length === 0 && transactions.length === 0) {
+    if (products.length === 0 && transactions.length === 0 && ppobTransactions.length === 0) {
       return;
     }
 
@@ -52,6 +53,7 @@ export const performAutoBackup = (activeUser: UserProfile | null): void => {
         debts,
         cashiers,
         categories,
+        ppobTransactions,
         exportedAt: timestamp
       }
     };

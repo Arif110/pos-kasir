@@ -62,6 +62,22 @@
         "currencySymbol": { "type": "string" }
       },
       "required": ["shopName", "shopAddress", "shopPhone", "qrisText", "receiptFooter", "currencySymbol"]
+    },
+    "TransaksiPPOB": {
+      "title": "TransaksiPPOB",
+      "description": "PPOB digital transaction record",
+      "type": "object",
+      "properties": {
+        "layanan": { "type": "string" },
+        "target": { "type": "string" },
+        "bankPenerima": { "type": "string" },
+        "biayaModal": { "type": "number" },
+        "biayaJual": { "type": "number" },
+        "profitToko": { "type": "number" },
+        "produk": { "type": "string" },
+        "tanggal": { "type": "object" }
+      },
+      "required": ["layanan", "target", "bankPenerima", "biayaModal", "biayaJual", "profitToko", "produk"]
     }
   },
   "firestore": {
@@ -80,6 +96,10 @@
     "settings/{settingId}": {
       "schema": "ShopSettings",
       "description": "Settings singletons collection"
+    },
+    "transaksi_ppob/{transaksiId}": {
+      "schema": "TransaksiPPOB",
+      "description": "PPOB transactions collection"
     }
   }
 }

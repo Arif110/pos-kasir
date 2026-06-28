@@ -88,6 +88,18 @@ export interface CashierAccount {
   createdAt: string;
 }
 
+export interface RiwayatPPOB {
+  id: string;
+  layanan: string;
+  target: string;
+  bankPenerima: string;
+  biayaModal: number;
+  biayaJual: number;
+  profitToko: number;
+  tanggal: any; // Can be Firebase timestamp, ISO string or Date number/string
+  produk: string;
+}
+
 export interface AutoBackup {
   id: string;
   timestamp: string;
@@ -100,6 +112,7 @@ export interface AutoBackup {
     debts: Debt[];
     cashiers?: CashierAccount[];
     categories?: string[];
+    ppobTransactions?: RiwayatPPOB[];
     exportedAt: string;
   };
 }

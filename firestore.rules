@@ -66,6 +66,18 @@ service cloud.firestore {
         && s.currencySymbol is string && s.currencySymbol.size() <= 10;
     }
 
+    function isValidTransaksiPpob(t) {
+      return t.keys().hasAll(['layanan', 'target', 'bankPenerima', 'biayaModal', 'biayaJual', 'profitToko', 'produk', 'tanggal'])
+        && t.layanan is string && t.layanan.size() <= 100
+        && t.target is string && t.target.size() <= 100
+        && t.bankPenerima is string && t.bankPenerima.size() <= 100
+        && (t.biayaModal is int || t.biayaModal is float) && t.biayaModal >= 0
+        && (t.biayaJual is int || t.biayaJual is float) && t.biayaJual >= 0
+        && (t.profitToko is int || t.profitToko is float)
+        && t.produk is string && t.produk.size() <= 200
+        && t.tanggal == request.time;
+    }
+
     // Collection match rules
     match /products/{productId} {
       allow read: if true;
@@ -85,6 +97,12 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow read: if true;
       allow write: if isValidId(settingId) && settingId == 'shop_profile' && isValidShopSettings(incoming());
+    }
+
+    match /transaksi_ppob/{transaksiId} {
+      allow read: if true;
+      allow create: if isValidId(transaksiId) && isValidTransaksiPpob(incoming());
+      allow delete: if true;
     }
   }
 }
