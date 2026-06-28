@@ -29,6 +29,21 @@ import {
 } from 'lucide-react';
 import { Product, CartItem, Transaction, Debt, ShopSettings } from '../types';
 
+const mapLegacySatuanJual = (satuan: string | undefined | null): string => {
+  if (!satuan) return 'Pcs (Pieces / Buah)';
+  const s = satuan.trim();
+  switch (s) {
+    case 'Pcs': return 'Pcs (Pieces / Buah)';
+    case 'Bks': return 'Bks (Bungkus)';
+    case 'Kg': return 'Kg (Kilogram)';
+    case 'Btl': return 'Btl (Botol)';
+    case 'Rcg': return 'Rcg (Renceng)';
+    case 'Tub': return 'Tub / Jar';
+    case 'Kaleng': return 'Kaleng (Can)';
+    default: return s;
+  }
+};
+
 interface StockAlertToast {
   id: string;
   productName: string;
@@ -223,7 +238,22 @@ export default function KasirTab({
     URL.revokeObjectURL(url);
   };
 
-  const handleSilentPrint = (transaksiData: any) => {
+  const handleSilentPrint = (invoiceInput: any) => {
+    if (!invoiceInput) return;
+
+    // Support both old-style flat structure and the full Transaction object
+    const invoice = {
+      invoiceNumber: invoiceInput.invoiceNumber || invoiceInput.id_transaksi || 'TX-UNKNOWN',
+      date: invoiceInput.date || new Date().toISOString(),
+      items: invoiceInput.items || [],
+      total: invoiceInput.total || 0,
+      paymentType: invoiceInput.paymentType || 'CASH',
+      amountPaid: invoiceInput.amountPaid || invoiceInput.total || 0,
+      change: invoiceInput.change || 0,
+      customerName: invoiceInput.customerName || '',
+      notes: invoiceInput.notes || ''
+    };
+
     // 1. Cari atau buat elemen iframe tersembunyi agar tidak merusak tampilan utama kasir
     let printIframe = document.getElementById('silent-print-iframe') as HTMLIFrameElement;
     if (!printIframe) {
@@ -239,7 +269,13 @@ export default function KasirTab({
     const doc = printIframe.contentWindow?.document || printIframe.contentDocument;
     if (!doc) return;
 
-    // 2. Susun template HTML Struk khusus ukuran kertas thermal (misal: 58mm atau 80mm)
+    const widthStyle = receiptFormat === '58mm' ? '58mm' : '80mm';
+    const bodyPadding = receiptFormat === '58mm' ? '2mm 1mm' : '5mm';
+    const fontSize = receiptFormat === '58mm' ? '10px' : '12px';
+    const titleSize = receiptFormat === '58mm' ? '13px' : '16px';
+    const currency = shopSettings?.currencySymbol || 'Rp';
+
+    // 2. Susun template HTML Struk khusus ukuran kertas thermal (58mm atau 80mm)
     doc.open();
     doc.write(`
       <html>
@@ -248,39 +284,123 @@ export default function KasirTab({
             @page { size: auto; margin: 0mm; }
             body { 
               font-family: 'Courier New', Courier, monospace; 
-              width: 58mm; /* Sesuaikan dengan lebar printer kasir Anda (58mm / 80mm) */
-              padding: 5mm;
+              width: ${widthStyle};
+              padding: ${bodyPadding};
               margin: 0;
-              font-size: 12px;
+              font-size: ${fontSize};
+              color: #000;
+              background-color: #fff;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
             .text-center { text-align: center; }
-            .line { border-top: 1px dashed #000; margin: 5px 0; }
+            .text-right { text-align: right; }
+            .font-bold { font-weight: bold; }
+            .line { border-top: 1px dashed #000; margin: 6px 0; }
             .flex-justify { display: flex; justify-content: space-between; }
+            .logo-container { text-align: center; margin-bottom: 8px; }
+            .logo { max-height: 48px; max-width: 90px; object-fit: contain; }
+            .title { font-size: ${titleSize}; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+            .meta-info { font-size: ${receiptFormat === '58mm' ? '9px' : '11px'}; margin-bottom: 4px; }
+            .item-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+            .item-details { flex: 1; }
+            .item-subtotal { font-weight: bold; margin-left: 8px; }
+            .footer { font-size: ${receiptFormat === '58mm' ? '9px' : '10px'}; margin-top: 8px; }
           </style>
         </head>
         <body>
+          ${shopSettings?.logoUrl ? `
+            <div class="logo-container">
+              <img src="${shopSettings.logoUrl}" class="logo" alt="Logo" />
+            </div>
+          ` : ''}
           <div class="text-center">
-            <strong>${shopSettings.shopName || 'UD TOSERBA FAZZ FAZZ'}</strong><br>
-            ${shopSettings.shopAddress || 'KASIR OFFLINE SYSTEM'}<br>
-            ID: ${transaksiData.id_transaksi}
+            <div class="title">${shopSettings?.shopName || 'KASIR PINTAR'}</div>
+            <div class="meta-info">${shopSettings?.shopAddress || ''}</div>
+            ${shopSettings?.shopPhone ? `<div class="meta-info">Telp: ${shopSettings.shopPhone}</div>` : ''}
           </div>
+          
+          <div class="line"></div>
+          
+          <div class="meta-info">
+            <div class="flex-justify">
+              <span>No. Struk:</span>
+              <span class="font-bold">${invoice.invoiceNumber}</span>
+            </div>
+            <div class="flex-justify">
+              <span>Tanggal:</span>
+              <span class="font-bold">${new Date(invoice.date).toLocaleString('id-ID')}</span>
+            </div>
+            <div class="flex-justify">
+              <span>Metode:</span>
+              <span class="font-bold">${invoice.paymentType}</span>
+            </div>
+            ${invoice.customerName ? `
+              <div class="flex-justify">
+                <span>Pelanggan:</span>
+                <span class="font-bold">${invoice.customerName.toUpperCase()}</span>
+              </div>
+            ` : ''}
+          </div>
+          
           <div class="line"></div>
           
           <!-- Looping item belanjaan -->
-          ${transaksiData.items.map((item: any) => `
-            <div class="flex-justify">
-              <span>${item.name} x${item.quantity}</span>
-              <span>Rp ${item.price.toLocaleString('id-ID')}</span>
-            </div>
-          `).join('')}
+          <div>
+            ${invoice.items.map((item: any) => `
+              <div class="item-row">
+                <div class="item-details">
+                  <div>${item.name}</div>
+                  <div style="font-size: 0.9em; color: #555;">${item.quantity} x ${currency} ${item.price.toLocaleString('id-ID')}</div>
+                </div>
+                <div class="item-subtotal">${currency} ${(item.subtotal || (item.price * item.quantity)).toLocaleString('id-ID')}</div>
+              </div>
+            `).join('')}
+          </div>
           
           <div class="line"></div>
-          <div class="flex-justify">
-            <strong>TOTAL:</strong>
-            <strong>Rp ${transaksiData.total.toLocaleString('id-ID')}</strong>
+          
+          <div class="meta-info" style="font-size: ${fontSize};">
+            <div class="flex-justify">
+              <span>Subtotal:</span>
+              <span class="font-bold">${currency} ${invoice.total.toLocaleString('id-ID')}</span>
+            </div>
+            ${invoice.paymentType === 'CASH' ? `
+              <div class="flex-justify">
+                <span>Bayar:</span>
+                <span>${currency} ${invoice.amountPaid.toLocaleString('id-ID')}</span>
+              </div>
+              <div class="flex-justify font-bold" style="border-top: 1px dotted #000; padding-top: 2px; margin-top: 2px;">
+                <span>Kembalian:</span>
+                <span>${currency} ${invoice.change.toLocaleString('id-ID')}</span>
+              </div>
+            ` : ''}
+            ${invoice.paymentType === 'QRIS' ? `
+              <div class="flex-justify font-bold">
+                <span>Status QRIS:</span>
+                <span>LUNAS</span>
+              </div>
+            ` : ''}
+            ${invoice.paymentType === 'DEBT' ? `
+              <div class="flex-justify font-bold">
+                <span>Sisa Utang:</span>
+                <span>${currency} ${invoice.total.toLocaleString('id-ID')}</span>
+              </div>
+            ` : ''}
           </div>
+          
+          ${invoice.notes ? `
+            <div class="line"></div>
+            <div style="font-size: 0.9em; font-style: italic;">
+              Catatan: ${invoice.notes}
+            </div>
+          ` : ''}
+          
           <div class="line"></div>
-          <div class="text-center">${shopSettings.receiptFooter || 'Terima Kasih Atas Kunjungan Anda'}</div>
+          <div class="text-center footer">
+            <p style="white-space: pre-line; margin: 0;">${shopSettings?.receiptFooter || 'Terima Kasih Atas Kunjungan Anda'}</p>
+            <p style="font-weight: bold; font-size: 0.85em; margin-top: 4px; color: #666;">POWERED BY KASIR PINTAR OFFLINE</p>
+          </div>
         </body>
       </html>
     `);
@@ -529,8 +649,11 @@ export default function KasirTab({
     clearCart();
   };
 
-  const formatPrice = (num: number) => {
-    return shopSettings.currencySymbol + ' ' + num.toLocaleString('id-ID');
+  const formatPrice = (num: any) => {
+    if (num === undefined || num === null || isNaN(Number(num))) {
+      return (shopSettings?.currencySymbol || 'Rp.') + ' 0';
+    }
+    return (shopSettings?.currencySymbol || 'Rp.') + ' ' + Number(num).toLocaleString('id-ID');
   };
 
   return (
@@ -691,7 +814,7 @@ export default function KasirTab({
                             <div className="flex justify-between text-[10px] text-slate-500">
                               <span className="font-mono">SKU: {product.code}</span>
                               <span className="font-semibold bg-slate-100 text-slate-700 px-1 rounded">
-                                Stok: {product.stock} {product.satuanJual || 'Pcs'}
+                                Stok: {product.stock} {mapLegacySatuanJual(product.satuanJual)}
                               </span>
                             </div>
                           </div>
@@ -794,7 +917,7 @@ export default function KasirTab({
                             ? 'bg-red-100 text-red-700' 
                             : 'bg-amber-100 text-amber-800'
                         }`}>
-                          {isOutOfStock ? 'HABIS' : `Sisa ${p.stock} ${p.satuanJual || 'Pcs'}`}
+                          {isOutOfStock ? 'HABIS' : `Sisa ${p.stock} ${mapLegacySatuanJual(p.satuanJual)}`}
                         </span>
                         <span className="text-[9px] text-slate-400 font-mono font-bold">Min: {p.minStock}</span>
                       </div>
@@ -970,7 +1093,7 @@ export default function KasirTab({
                           ? 'Habis' 
                           : remainingStock <= 0 
                             ? 'Keranjang Penuh'
-                            : `Stok: ${remainingStock} ${p.satuanJual || 'Pcs'}`
+                            : `Stok: ${remainingStock} ${mapLegacySatuanJual(p.satuanJual)}`
                         }
                       </span>
                     </div>
@@ -1459,7 +1582,35 @@ export default function KasirTab({
               <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                 Pilihan Cetak Struk
               </div>
+
+              {/* Primary Action: Thermal Print using browser dialog on iframe (100% reliable) */}
+              <button
+                id="silent_print_btn"
+                onClick={() => {
+                  if (activeInvoice) {
+                    handleSilentPrint(activeInvoice);
+                  }
+                }}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2.5 transition-all shadow-md shadow-blue-500/10 active:scale-[0.98] cursor-pointer"
+                title="Cetak Struk sesuai lebar kertas kasir (58mm/80mm) lewat Printer Thermal"
+              >
+                <Printer className="w-4 h-4 text-blue-100 shrink-0" />
+                <span>Cetak Struk (Printer Thermal / PDF)</span>
+              </button>
+
               <div className="grid grid-cols-2 gap-2">
+                {/* Secondary Action: Standard system layout printing (A4 / PDF) */}
+                <button
+                  id="print_invoice_btn"
+                  onClick={() => window.print()}
+                  className="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-250 font-bold rounded-xl text-[11px] flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
+                  title="Cetak lewat sistem cetak standar browser"
+                >
+                  <Printer className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                  <span className="truncate">Cetak PDF / A4</span>
+                </button>
+
+                {/* Advanced Action: Local thermal driver server API (Lokal API) */}
                 <button
                   id="direct_local_print_btn"
                   onClick={() => {
@@ -1468,38 +1619,17 @@ export default function KasirTab({
                     }
                   }}
                   className="py-2.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold rounded-xl text-[11px] flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
-                  title="Cetak Langsung (Lokal API)"
+                  title="Gunakan ini HANYA jika Anda menjalankan aplikasi driver printer lokal di PC Anda"
                 >
                   <Printer className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                  <span className="truncate">Lokal API</span>
-                </button>
-                <button
-                  id="silent_print_btn"
-                  onClick={() => {
-                    if (activeInvoice) {
-                      handleSilentPrint({
-                        id_transaksi: activeInvoice.invoiceNumber,
-                        items: activeInvoice.items,
-                        total: activeInvoice.total
-                      });
-                    }
-                  }}
-                  className="py-2.5 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold rounded-xl text-[11px] flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
-                  title="Cetak Thermal (Silent)"
-                >
-                  <Printer className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                  <span className="truncate">Thermal Silent</span>
+                  <span className="truncate">Driver Lokal (API)</span>
                 </button>
               </div>
 
-              <button
-                id="print_invoice_btn"
-                onClick={() => window.print()}
-                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-250 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
-              >
-                <Printer className="w-4 h-4 text-slate-600 shrink-0" />
-                <span>Cetak / Simpan PDF (A4/Struk)</span>
-              </button>
+              {/* Explanatory Note to prevent confusion about localhost:3000 */}
+              <p className="text-[10px] text-slate-400 text-center leading-normal pt-1">
+                💡 <span className="font-semibold">Saran:</span> Gunakan <span className="font-bold text-slate-600">"Cetak Struk (Printer Thermal / PDF)"</span> di atas. Tombol <span className="font-semibold">Driver Lokal</span> memerlukan aplikasi server printer tambahan yang terpasang di komputer Anda.
+              </p>
 
               <button
                 id="close_invoice_btn"
@@ -1620,12 +1750,14 @@ export default function KasirTab({
               <button
                 onClick={() => {
                   setShowLocalPrintError(false);
-                  window.print();
+                  if (activeInvoice) {
+                    handleSilentPrint(activeInvoice);
+                  }
                 }}
-                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer"
               >
-                <Printer className="w-4 h-4 text-indigo-200" />
-                <span>Gunakan Printer Browser (Fallback Aman)</span>
+                <Printer className="w-4 h-4 text-blue-200" />
+                <span>Gunakan Printer Thermal (Fallback Aman)</span>
               </button>
               
               <div className="grid grid-cols-2 gap-2">

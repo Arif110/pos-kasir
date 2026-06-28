@@ -41,7 +41,32 @@ const daftarKategoriDefault = [
   "Rokok"
 ];
 
-const daftarSatuanJual = ["Pcs", "Kg", "Liter", "Pouch", "Btl", "Butir", "Rcg", "Bks", "Kaleng", "Tub", "Pack", "Semprot", "Buah", "Batang"];
+const daftarSatuanJual = [
+  "Pcs (Pieces / Buah)",
+  "Bks (Bungkus)",
+  "Kg (Kilogram)",
+  "Btl (Botol)",
+  "Rcg (Renceng)",
+  "Pouch",
+  "Tub / Jar",
+  "Kaleng (Can)",
+  "Batang"
+];
+
+const mapLegacySatuanJual = (satuan: string | undefined | null): string => {
+  if (!satuan) return 'Pcs (Pieces / Buah)';
+  const s = satuan.trim();
+  switch (s) {
+    case 'Pcs': return 'Pcs (Pieces / Buah)';
+    case 'Bks': return 'Bks (Bungkus)';
+    case 'Kg': return 'Kg (Kilogram)';
+    case 'Btl': return 'Btl (Botol)';
+    case 'Rcg': return 'Rcg (Renceng)';
+    case 'Tub': return 'Tub / Jar';
+    case 'Kaleng': return 'Kaleng (Can)';
+    default: return s;
+  }
+};
 
 export default function StokTab({ 
   products, 
@@ -105,7 +130,7 @@ export default function StokTab({
     purchasePrice: 0,
     stock: 0,
     minStock: 5,
-    satuanJual: 'Pcs',
+    satuanJual: 'Pcs (Pieces / Buah)',
     expiryDate: '',
     entryDate: '',
     lastSoldDate: ''
@@ -133,7 +158,7 @@ export default function StokTab({
       purchasePrice: 0,
       stock: 0,
       minStock: 5,
-      satuanJual: 'Pcs',
+      satuanJual: 'Pcs (Pieces / Buah)',
       expiryDate: '',
       entryDate: todayStr,
       lastSoldDate: ''
@@ -151,7 +176,7 @@ export default function StokTab({
       purchasePrice: p.purchasePrice,
       stock: p.stock,
       minStock: p.minStock,
-      satuanJual: p.satuanJual || 'Pcs',
+      satuanJual: mapLegacySatuanJual(p.satuanJual),
       expiryDate: p.expiryDate || '',
       entryDate: p.entryDate || new Date().toISOString().split('T')[0],
       lastSoldDate: p.lastSoldDate || ''
@@ -229,7 +254,7 @@ export default function StokTab({
       "Barcode Label": p.code,
       "Deskripsi Barang": p.name,
       "Kategori": p.category,
-      "Satuan Jual (Kasir)": p.satuanJual || 'Pcs',
+      "Satuan Jual (Kasir)": mapLegacySatuanJual(p.satuanJual),
       "Harga Modal": p.purchasePrice,
       "Harga Jual": p.price,
       "Stok Tersedia": p.stock,
@@ -275,7 +300,7 @@ export default function StokTab({
           const price = Number(item["Harga Jual"] || item["price"] || 0);
           const stock = Number(item["Stok Tersedia"] || item["Stok"] || item["stock"] || 0);
           const minStock = Number(item["Stok Minimum"] || item["minStock"] || 5);
-          const satuanJual = String(item["Satuan Jual (Kasir)"] || item["Satuan Jual"] || item["satuanJual"] || "Pcs").trim();
+          const satuanJual = mapLegacySatuanJual(String(item["Satuan Jual (Kasir)"] || item["Satuan Jual"] || item["satuanJual"] || "Pcs"));
           const expiryDate = item["Tanggal Kadaluarsa"] || item["expiryDate"] || item["Kadaluarsa"] || "";
 
           const existingIdx = existingProducts.findIndex(p => p.code === code);
@@ -354,8 +379,11 @@ export default function StokTab({
     return { status: 'SAFE', daysLeft: diffDays, monthsLeft: diffMonths, label: 'Aman' };
   };
 
-  const formatPrice = (num: number) => {
-    return shopSettings.currencySymbol + ' ' + num.toLocaleString('id-ID');
+  const formatPrice = (num: any) => {
+    if (num === undefined || num === null || isNaN(Number(num))) {
+      return (shopSettings?.currencySymbol || 'Rp.') + ' 0';
+    }
+    return (shopSettings?.currencySymbol || 'Rp.') + ' ' + Number(num).toLocaleString('id-ID');
   };
 
   const formatDateIndo = (dateStr?: string) => {
@@ -526,7 +554,7 @@ export default function StokTab({
                               ? 'bg-amber-50 text-amber-800 border-amber-200' 
                               : 'bg-emerald-50 text-emerald-800 border-emerald-200'
                         }`}>
-                          {p.stock} {p.satuanJual || 'Pcs'}
+                          {p.stock} {mapLegacySatuanJual(p.satuanJual)}
                         </span>
                       </div>
                     </td>

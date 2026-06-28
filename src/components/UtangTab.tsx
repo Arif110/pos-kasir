@@ -86,8 +86,11 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
     alert(`Pembayaran berhasil dicatat! Sisa utang: ${formatPrice(newRemaining)}`);
   };
 
-  const formatPrice = (num: number) => {
-    return shopSettings.currencySymbol + ' ' + num.toLocaleString('id-ID');
+  const formatPrice = (num: any) => {
+    if (num === undefined || num === null || isNaN(Number(num))) {
+      return (shopSettings?.currencySymbol || 'Rp.') + ' 0';
+    }
+    return (shopSettings?.currencySymbol || 'Rp.') + ' ' + Number(num).toLocaleString('id-ID');
   };
 
   const formatDate = (isoStr: string) => {
