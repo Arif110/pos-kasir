@@ -724,7 +724,7 @@ export default function PpobTab() {
             </div>
             <div>
               <h3 className="font-title text-xl font-extrabold text-white tracking-wide flex items-center gap-2">
-                <Smartphone className="h-5 w-5 text-sky-200 shrink-0" /> Panel Transaksi PPOB & Digital
+                <Smartphone className="h-5 w-5 text-sky-200 shrink-0" /> Transaksi PPOB & Digital
               </h3>
               <p className="text-xs text-cyan-100 font-semibold uppercase tracking-widest mt-0.5">Penyimpanan Lokal Offline-First</p>
             </div>

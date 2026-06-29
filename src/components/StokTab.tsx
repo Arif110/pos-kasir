@@ -381,9 +381,9 @@ export default function StokTab({
 
   const formatPrice = (num: any) => {
     if (num === undefined || num === null || isNaN(Number(num))) {
-      return (shopSettings?.currencySymbol || 'Rp.') + ' 0';
+      return (shopSettings?.currencySymbol || 'Rp.') + '\u00a00';
     }
-    return (shopSettings?.currencySymbol || 'Rp.') + ' ' + Number(num).toLocaleString('id-ID');
+    return (shopSettings?.currencySymbol || 'Rp.') + '\u00a0' + Number(num).toLocaleString('id-ID');
   };
 
   const formatDateIndo = (dateStr?: string) => {
@@ -488,7 +488,7 @@ export default function StokTab({
         <div className="overflow-x-auto">
            <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider font-mono">
+              <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider font-mono whitespace-nowrap">
                 <th className="p-4">SKU / Kode</th>
                 <th className="p-4">Nama Barang</th>
                 <th className="p-4">Kategori</th>
@@ -543,8 +543,8 @@ export default function StokTab({
                         {p.category}
                       </span>
                     </td>
-                    <td className="p-4 text-right font-mono text-xs text-slate-600">{formatPrice(p.purchasePrice)}</td>
-                    <td className="p-4 text-right font-mono text-xs text-emerald-700 font-extrabold">{formatPrice(p.price)}</td>
+                    <td className="p-4 text-right font-mono text-xs text-slate-600 whitespace-nowrap">{formatPrice(p.purchasePrice)}</td>
+                    <td className="p-4 text-right font-mono text-xs text-emerald-700 font-extrabold whitespace-nowrap">{formatPrice(p.price)}</td>
                     <td className="p-4 text-center font-bold">
                       <div className="flex flex-col items-center">
                         <span className={`px-2.5 py-1 rounded-md text-xs font-mono font-bold border ${
@@ -580,7 +580,7 @@ export default function StokTab({
                         </div>
                       </div>
                     </td>
-                    <td className="p-4 text-right font-mono text-xs">
+                    <td className="p-4 text-right font-mono text-xs whitespace-nowrap">
                       <div className="text-slate-900 font-bold">{formatPrice(margin)}</div>
                       <div className="text-[10px] text-slate-400">Margin: {profitPercent}%</div>
                     </td>

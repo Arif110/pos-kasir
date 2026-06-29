@@ -62,7 +62,7 @@ export default function AnalitikTab({
   debts, 
   shopSettings 
 }: AnalitikTabProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'STATISTIK' | 'RIWAYAT_PENJUALAN'>('STATISTIK');
+  const [activeSubTab, setActiveSubTab] = useState<'STATISTIK' | 'RIWAYAT_PENJUALAN' | 'LAPORAN_BULANAN'>('STATISTIK');
   const [historySearch, setHistorySearch] = useState('');
   const [selectedTxDetail, setSelectedTxDetail] = useState<Transaction | null>(null);
   const [copiedReceipt, setCopiedReceipt] = useState(false);
@@ -154,9 +154,9 @@ export default function AnalitikTab({
 
   const formatPrice = (num: any) => {
     if (num === undefined || num === null || isNaN(Number(num))) {
-      return (shopSettings?.currencySymbol || 'Rp.') + ' 0';
+      return (shopSettings?.currencySymbol || 'Rp.') + '\u00a00';
     }
-    return (shopSettings?.currencySymbol || 'Rp.') + ' ' + Number(num).toLocaleString('id-ID');
+    return (shopSettings?.currencySymbol || 'Rp.') + '\u00a0' + Number(num).toLocaleString('id-ID');
   };
 
   const formatDate = (isoStr: string) => {
@@ -266,6 +266,91 @@ export default function AnalitikTab({
     return matchesSearch;
   });
 
+  // Laporan Penjualan Bulanan
+  const monthlyReports = useMemo(() => {
+    const reportMap: { [key: string]: { 
+      monthKey: string; 
+      monthName: string; 
+      txCount: number; 
+      revenue: number; 
+      profit: number; 
+      itemsSold: number; 
+    } } = {};
+
+    transactions.forEach(t => {
+      const dateObj = new Date(t.date);
+      if (isNaN(dateObj.getTime())) return;
+      
+      const year = dateObj.getFullYear();
+      const monthNum = dateObj.getMonth(); // 0-11
+      const monthKey = `${year}-${String(monthNum + 1).padStart(2, '0')}`;
+      
+      const monthNamesIndo = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      ];
+      const monthName = `${monthNamesIndo[monthNum]} ${year}`;
+
+      if (!reportMap[monthKey]) {
+        reportMap[monthKey] = {
+          monthKey,
+          monthName,
+          txCount: 0,
+          revenue: 0,
+          profit: 0,
+          itemsSold: 0
+        };
+      }
+
+      reportMap[monthKey].txCount += 1;
+      reportMap[monthKey].revenue += t.total;
+      reportMap[monthKey].profit += t.totalProfit || 0;
+      
+      const qtyInTx = t.items.reduce((sum, item) => sum + item.quantity, 0);
+      reportMap[monthKey].itemsSold += qtyInTx;
+    });
+
+    return Object.values(reportMap).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+  }, [transactions]);
+
+  // Derived metrics for monthly report view
+  const bestMonth = useMemo(() => {
+    if (monthlyReports.length === 0) return null;
+    return [...monthlyReports].sort((a, b) => b.revenue - a.revenue)[0];
+  }, [monthlyReports]);
+
+  const averageMonthlyRevenue = useMemo(() => {
+    if (monthlyReports.length === 0) return 0;
+    const totalRev = monthlyReports.reduce((sum, r) => sum + r.revenue, 0);
+    return Math.round(totalRev / monthlyReports.length);
+  }, [monthlyReports]);
+
+  const totalAllItemsSold = useMemo(() => {
+    return monthlyReports.reduce((sum, r) => sum + r.itemsSold, 0);
+  }, [monthlyReports]);
+
+  const downloadMonthlyReportCSV = () => {
+    const headers = ['Bulan', 'Jumlah Transaksi', 'Total Barang Terjual', 'Total Omset', 'Total Keuntungan'];
+    const rows = monthlyReports.map(r => [
+      r.monthName,
+      r.txCount.toString(),
+      r.itemsSold.toString(),
+      r.revenue.toString(),
+      r.profit.toString()
+    ]);
+    
+    const csvContent = "\ufeff" + [headers, ...rows].map(e => e.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Laporan-Penjualan-Bulanan.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-4">
       
@@ -292,6 +377,17 @@ export default function AnalitikTab({
           }`}
         >
           Riwayat Penjualan
+        </button>
+        <button
+          id="tab_analitik_laporan_bulanan"
+          onClick={() => setActiveSubTab('LAPORAN_BULANAN')}
+          className={`text-xs font-bold px-4 py-2 rounded-lg transition-all active:scale-[0.98] cursor-pointer ${
+            activeSubTab === 'LAPORAN_BULANAN'
+              ? 'bg-gradient-to-r from-sky-600 to-cyan-500 text-white shadow-md shadow-cyan-500/10 font-extrabold'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+          }`}
+        >
+          Laporan Bulanan
         </button>
       </div>
 
@@ -780,7 +876,7 @@ export default function AnalitikTab({
 
           </div>
         </div>
-      ) : (
+      ) : activeSubTab === 'RIWAYAT_PENJUALAN' ? (
         /* TRANSACTION HISTORY LOG LIST */
         <div className="space-y-4">
           {/* BAGIAN ATAS: SEARCH BAR & COUNTER DATA */}
@@ -875,6 +971,123 @@ export default function AnalitikTab({
                     <tr>
                       <td colSpan={7} className="p-8 text-center text-slate-400">
                         Belum ada riwayat transaksi penjualan tercatat.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* LAPORAN BULANAN VIEW */
+        <div className="space-y-6">
+          {/* Header & CSV Download Button */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
+                <FileText className="h-5 w-5 text-cyan-600 shrink-0" />
+                Laporan Penjualan Bulanan
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">Ringkasan akumulasi penjualan, kuantitas produk terjual, dan estimasi laba bersih per bulan</p>
+            </div>
+            {monthlyReports.length > 0 && (
+              <button
+                id="download_monthly_report_csv_btn"
+                onClick={downloadMonthlyReportCSV}
+                className="bg-gradient-to-r from-sky-600 to-cyan-500 hover:opacity-90 text-white text-xs font-extrabold py-2.5 px-4 rounded-xl shadow-md shadow-cyan-500/10 hover:shadow-lg transition-all flex items-center gap-2 active:scale-[0.98] cursor-pointer"
+              >
+                <Download className="h-4 w-4" />
+                <span>Ekspor ke CSV</span>
+              </button>
+            )}
+          </div>
+
+          {/* Quick Metrics Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 relative overflow-hidden group transition-all duration-300 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-100">
+              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-sky-500/5 rounded-full blur-2xl pointer-events-none"></div>
+              <p className="text-xs font-bold text-slate-500 tracking-wider uppercase mb-1">Rata-rata Omset Bulanan</p>
+              <div className="text-xl font-extrabold text-slate-800 font-mono mt-1.5">
+                {formatPrice(averageMonthlyRevenue)}
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">Berdasarkan total periode yang tercatat</p>
+            </div>
+
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 relative overflow-hidden group transition-all duration-300 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-100">
+              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
+              <p className="text-xs font-bold text-slate-500 tracking-wider uppercase mb-1">Bulan Terbaik (Omset)</p>
+              <div className="text-xl font-extrabold text-emerald-600 truncate mt-1.5">
+                {bestMonth ? bestMonth.monthName : '-'}
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">
+                {bestMonth ? `${formatPrice(bestMonth.revenue)}` : 'Belum ada transaksi'}
+              </p>
+            </div>
+
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 relative overflow-hidden group transition-all duration-300 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-100">
+              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none"></div>
+              <p className="text-xs font-bold text-slate-500 tracking-wider uppercase mb-1">Total Barang Terjual</p>
+              <div className="text-xl font-extrabold text-slate-800 mt-1.5">
+                {totalAllItemsSold.toLocaleString('id-ID')} <span className="text-xs font-medium text-slate-500">Unit</span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">Akumulasi seluruh barang terjual</p>
+            </div>
+
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 relative overflow-hidden group transition-all duration-300 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-100">
+              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
+              <p className="text-xs font-bold text-slate-500 tracking-wider uppercase mb-1">Total Bulan Aktif</p>
+              <div className="text-xl font-extrabold text-amber-600 mt-1.5">
+                {monthlyReports.length} <span className="text-xs font-medium text-slate-500">Bulan</span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">Jumlah bulan yang memiliki transaksi</p>
+            </div>
+          </div>
+
+          {/* Main Table Content */}
+          <div className="bg-white rounded-2xl shadow-xl shadow-slate-100 border border-slate-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/70 border-b border-slate-100 text-[10px] font-bold text-slate-400 tracking-wider uppercase whitespace-nowrap">
+                    <th className="py-4 px-6">Bulan Periode</th>
+                    <th className="py-4 px-6 text-center">Jumlah Transaksi</th>
+                    <th className="py-4 px-6 text-center">Total Barang Terjual</th>
+                    <th className="py-4 px-6 text-right">Total Omset Kotor</th>
+                    <th className="py-4 px-6 text-right">Keuntungan Bersih (Profit)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
+                  {monthlyReports.map((report) => (
+                    <tr 
+                      key={report.monthKey} 
+                      className="hover:bg-slate-50/50 transition-colors"
+                    >
+                      <td className="py-4 px-6 font-bold text-slate-900 flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-cyan-500" />
+                        {report.monthName}
+                      </td>
+                      <td className="py-4 px-6 text-center">
+                        <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-bold border border-slate-200/60 font-mono">
+                          {report.txCount} Transaksi
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-center font-mono font-bold text-slate-600">
+                        {report.itemsSold.toLocaleString('id-ID')} unit
+                      </td>
+                      <td className="py-4 px-6 text-right font-semibold text-slate-900 font-mono whitespace-nowrap">
+                        {formatPrice(report.revenue)}
+                      </td>
+                      <td className="py-4 px-6 text-right font-extrabold text-emerald-600 font-mono whitespace-nowrap">
+                        {formatPrice(report.profit)}
+                      </td>
+                    </tr>
+                  ))}
+
+                  {monthlyReports.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="p-12 text-center text-slate-400">
+                        Belum ada data transaksi bulanan yang terekam.
                       </td>
                     </tr>
                   )}

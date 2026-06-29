@@ -776,9 +776,9 @@ export default function KasirTab({
 
   const formatPrice = (num: any) => {
     if (num === undefined || num === null || isNaN(Number(num))) {
-      return (shopSettings?.currencySymbol || 'Rp.') + ' 0';
+      return (shopSettings?.currencySymbol || 'Rp.') + '\u00a00';
     }
-    return (shopSettings?.currencySymbol || 'Rp.') + ' ' + Number(num).toLocaleString('id-ID');
+    return (shopSettings?.currencySymbol || 'Rp.') + '\u00a0' + Number(num).toLocaleString('id-ID');
   };
 
   return (
