@@ -120,6 +120,46 @@ export default function StokTab({
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   
+  // Quick Restock state
+  const [showRestockModal, setShowRestockModal] = useState(false);
+  const [selectedRestockProduct, setSelectedRestockProduct] = useState<Product | null>(null);
+  const [restockQty, setRestockQty] = useState<number>(0);
+  const [restockPurchasePrice, setRestockPurchasePrice] = useState<number>(0);
+  const [restockPrice, setRestockPrice] = useState<number>(0);
+  const [restockExpiryDate, setRestockExpiryDate] = useState<string>('');
+
+  const handleOpenRestockModal = (p: Product) => {
+    setSelectedRestockProduct(p);
+    setRestockQty(10); // Default restock quantity
+    setRestockPurchasePrice(p.purchasePrice);
+    setRestockPrice(p.price);
+    setRestockExpiryDate(p.expiryDate || '');
+    setShowRestockModal(true);
+  };
+
+  const handleRestockSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRestockProduct) return;
+
+    if (restockQty <= 0) {
+      alert('Jumlah restock harus lebih dari 0!');
+      return;
+    }
+
+    const updatedProduct: Product = {
+      ...selectedRestockProduct,
+      stock: selectedRestockProduct.stock + Number(restockQty),
+      purchasePrice: Number(restockPurchasePrice),
+      price: Number(restockPrice),
+      expiryDate: restockExpiryDate,
+      entryDate: new Date().toISOString().split('T')[0] // update entry date to today
+    };
+
+    await onSaveProduct(updatedProduct);
+    setShowRestockModal(false);
+    setSelectedRestockProduct(null);
+  };
+  
   // Product forms
   const [formData, setFormData] = useState({
     id: '',
@@ -380,10 +420,11 @@ export default function StokTab({
   };
 
   const formatPrice = (num: any) => {
+    const sym = (shopSettings?.currencySymbol || 'Rp').replace(/\.$/, '').trim();
     if (num === undefined || num === null || isNaN(Number(num))) {
-      return (shopSettings?.currencySymbol || 'Rp.') + '\u00a00';
+      return `${sym} 0`;
     }
-    return (shopSettings?.currencySymbol || 'Rp.') + '\u00a0' + Number(num).toLocaleString('id-ID');
+    return `${sym} ${Number(num).toLocaleString('id-ID')}`;
   };
 
   const formatDateIndo = (dateStr?: string) => {
@@ -543,8 +584,8 @@ export default function StokTab({
                         {p.category}
                       </span>
                     </td>
-                    <td className="p-4 text-right font-mono text-xs text-slate-600 whitespace-nowrap">{formatPrice(p.purchasePrice)}</td>
-                    <td className="p-4 text-right font-mono text-xs text-emerald-700 font-extrabold whitespace-nowrap">{formatPrice(p.price)}</td>
+                    <td className="p-4 text-right font-nominal text-xs text-slate-600 whitespace-nowrap">{formatPrice(p.purchasePrice)}</td>
+                    <td className="p-4 text-right font-nominal text-xs text-emerald-700 font-extrabold whitespace-nowrap">{formatPrice(p.price)}</td>
                     <td className="p-4 text-center font-bold">
                       <div className="flex flex-col items-center">
                         <span className={`px-2.5 py-1 rounded-md text-xs font-mono font-bold border ${
@@ -619,9 +660,24 @@ export default function StokTab({
                     <td className="p-4 text-center">
                       <div className="flex items-center justify-center gap-1.5">
                         <button
+                          id={`restock_prod_${p.id}`}
+                          onClick={() => handleOpenRestockModal(p)}
+                          className={`p-1.5 active:scale-90 rounded-lg transition-all border cursor-pointer flex items-center justify-center gap-1 ${
+                            isOutOfStock
+                              ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 animate-pulse font-bold animate-duration-1000'
+                              : isLowStock
+                                ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-400 font-semibold'
+                                : 'bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border-slate-250 hover:border-slate-350'
+                          }`}
+                          title={isOutOfStock ? "Restock Sekarang (Barang Habis)" : "Restock / Tambah Stok"}
+                        >
+                          <PackagePlus className="w-4 h-4" />
+                          {isOutOfStock && <span className="text-[10px] px-1 font-bold whitespace-nowrap">Restock</span>}
+                        </button>
+                        <button
                           id={`edit_prod_${p.id}`}
                           onClick={() => handleOpenEditModal(p)}
-                          className="p-1.5 bg-slate-50 hover:bg-slate-100 active:scale-90 text-slate-600 hover:text-slate-900 border border-slate-250 hover:border-slate-350 rounded-lg transition-all cursor-pointer"
+                          className="p-1.5 bg-slate-50 hover:bg-slate-100 active:scale-90 text-slate-600 hover:text-slate-900 border border-slate-250 hover:border-slate-350 rounded-lg transition-all cursor-pointer flex items-center justify-center"
                           title="Edit Barang"
                         >
                           <Edit2 className="w-4 h-4" />
@@ -629,7 +685,7 @@ export default function StokTab({
                         <button
                           id={`delete_prod_${p.id}`}
                           onClick={() => handleDelete(p)}
-                          className="p-1.5 bg-slate-50 hover:bg-rose-50 active:scale-90 text-slate-600 hover:text-rose-600 border border-slate-250 hover:border-rose-250 rounded-lg transition-all cursor-pointer"
+                          className="p-1.5 bg-slate-50 hover:bg-rose-50 active:scale-90 text-slate-600 hover:text-rose-600 border border-slate-250 hover:border-rose-250 rounded-lg transition-all cursor-pointer flex items-center justify-center"
                           title="Hapus Barang"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -881,6 +937,170 @@ export default function StokTab({
                   Simpan Barang
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Restock Modal */}
+      {showRestockModal && selectedRestockProduct && (
+        <div id="restock_modal_popup" className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col animate-scaleIn">
+            
+            {/* Header */}
+            <div className="bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-white/10 text-emerald-300 rounded-xl">
+                  <PackagePlus className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold tracking-tight">Quick Restock / Tambah Stok</h2>
+                  <p className="text-[10px] text-emerald-100/85">Perbarui persediaan barang dengan cepat</p>
+                </div>
+              </div>
+              <button
+                id="close_restock_modal"
+                onClick={() => {
+                  setShowRestockModal(false);
+                  setSelectedRestockProduct(null);
+                }}
+                className="text-white/80 hover:text-white p-1.5 active:scale-90 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleRestockSubmit} className="p-5 space-y-4">
+              
+              {/* Product Info Display Card */}
+              <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3.5 space-y-1">
+                <div className="flex justify-between items-start">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Barang</span>
+                  <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-200/60 px-1.5 py-0.5 rounded">
+                    SKU: {selectedRestockProduct.code}
+                  </span>
+                </div>
+                <h3 className="text-sm font-bold text-slate-900">{selectedRestockProduct.name}</h3>
+                <p className="text-xs text-slate-500">Kategori: {selectedRestockProduct.category}</p>
+              </div>
+
+              {/* Input Qty and preview */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Jumlah Tambahan *</label>
+                  <input
+                    id="restock_input_qty"
+                    type="number"
+                    required
+                    min="1"
+                    value={restockQty || ''}
+                    onChange={(e) => setRestockQty(parseInt(e.target.value) || 0)}
+                    className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 rounded-xl py-2.5 px-3 text-xs font-bold outline-none transition-all font-mono"
+                  />
+                </div>
+
+                <div className="bg-emerald-50/40 border border-emerald-100 p-2.5 rounded-xl flex flex-col justify-center">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Proyeksi Stok</span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-xs font-mono font-medium text-slate-500">{selectedRestockProduct.stock}</span>
+                    <span className="text-slate-400 text-xs">→</span>
+                    <span className="text-sm font-mono font-bold text-emerald-700">
+                      {selectedRestockProduct.stock + Number(restockQty || 0)} {mapLegacySatuanJual(selectedRestockProduct.satuanJual)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Input Prices */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Harga Beli Baru</label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-xs font-bold text-slate-400">Rp</span>
+                    <input
+                      id="restock_input_purchase"
+                      type="text"
+                      required
+                      value={restockPurchasePrice ? restockPurchasePrice.toLocaleString('id-ID') : ''}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\D/g, '');
+                        setRestockPurchasePrice(parseInt(raw, 10) || 0);
+                      }}
+                      className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 rounded-xl py-2.5 pl-8 pr-3 text-xs font-bold outline-none transition-all font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Harga Jual Baru</label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-xs font-bold text-slate-400">Rp</span>
+                    <input
+                      id="restock_input_price"
+                      type="text"
+                      required
+                      value={restockPrice ? restockPrice.toLocaleString('id-ID') : ''}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\D/g, '');
+                        setRestockPrice(parseInt(raw, 10) || 0);
+                      }}
+                      className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 rounded-xl py-2.5 pl-8 pr-3 text-xs font-bold outline-none transition-all font-mono text-emerald-700 font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Tanggal Kedaluwarsa */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Tanggal Kedaluwarsa (Opsional)</label>
+                <input
+                  id="restock_input_expiry"
+                  type="date"
+                  value={restockExpiryDate}
+                  onChange={(e) => setRestockExpiryDate(e.target.value)}
+                  className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 rounded-xl py-2.5 px-3 text-xs font-bold outline-none transition-all cursor-pointer"
+                />
+              </div>
+
+              {/* Margin & Profit Preview */}
+              <div className="bg-slate-50/80 border border-slate-200 p-3 rounded-xl flex justify-between items-center">
+                <div>
+                  <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Margin & Profit Baru</h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5 leading-none">Selisih harga jual & beli baru</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-bold text-emerald-600 block">
+                    {formatPrice(Math.max(0, restockPrice - restockPurchasePrice))}
+                  </span>
+                  <span className="text-[9px] font-medium text-slate-400 block mt-0.5">
+                    Profit: {restockPurchasePrice > 0 ? Math.round(((restockPrice - restockPurchasePrice) / restockPurchasePrice) * 100) : 0}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+                <button
+                  id="cancel_restock_btn"
+                  type="button"
+                  onClick={() => {
+                    setShowRestockModal(false);
+                    setSelectedRestockProduct(null);
+                  }}
+                  className="px-4 py-2 bg-slate-50 hover:bg-slate-100 active:scale-[0.98] text-slate-700 hover:text-slate-950 border border-slate-250 hover:border-slate-350 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  id="submit_restock_btn"
+                  type="submit"
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-xs font-extrabold rounded-xl transition-all shadow-md shadow-emerald-500/10 hover:shadow-lg cursor-pointer"
+                >
+                  Simpan Restock
+                </button>
+              </div>
+
             </form>
           </div>
         </div>

@@ -7,6 +7,20 @@
   --font-title: "Plus Jakarta Sans", "Inter", sans-serif;
 }
 
+/* Native desktop application optimizations (makes Electron app feel organic) */
+body {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Allow text selection only where appropriate */
+input, textarea, select, [contenteditable="true"], .selectable-text, code, pre {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
 /* Premium Glassmorphism (Dark theme spec) */
 .glass-card {
   background: rgba(22, 24, 33, 0.75);
@@ -158,3 +172,29 @@
     width: 100%;
   }
 }
+
+/* Beautiful Custom Nominal Styling */
+.font-nominal {
+  font-family: "Plus Jakarta Sans", "Inter", var(--font-sans), sans-serif !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.015em !important;
+}
+
+.nominal-prefix {
+  font-size: 0.82em;
+  opacity: 0.75;
+  font-weight: 500;
+  margin-right: 0.15em;
+  font-family: var(--font-sans), sans-serif;
+}
+
+.nominal-large {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.nominal-xl {
+  font-size: 2.25rem;
+  font-weight: 900;
+}
+

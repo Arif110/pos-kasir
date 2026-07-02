@@ -87,10 +87,11 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
   };
 
   const formatPrice = (num: any) => {
+    const sym = (shopSettings?.currencySymbol || 'Rp').replace(/\.$/, '').trim();
     if (num === undefined || num === null || isNaN(Number(num))) {
-      return (shopSettings?.currencySymbol || 'Rp.') + '\u00a00';
+      return `${sym} 0`;
     }
-    return (shopSettings?.currencySymbol || 'Rp.') + '\u00a0' + Number(num).toLocaleString('id-ID');
+    return `${sym} ${Number(num).toLocaleString('id-ID')}`;
   };
 
   const formatDate = (isoStr: string) => {
@@ -160,7 +161,7 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider font-mono">
+              <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider font-sans">
                 <th className="p-4">Pelanggan</th>
                 <th className="p-4">No. Telp / HP</th>
                 <th className="p-4 text-right">Total Utang</th>
@@ -183,7 +184,7 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
                   >
                     <td className="p-4">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold font-mono border border-slate-200">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold font-nominal border border-slate-200">
                           {d.customerName[0].toUpperCase()}
                         </div>
                         <div>
@@ -192,12 +193,12 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
                         </div>
                       </div>
                     </td>
-                    <td className="p-4 font-mono text-xs">{d.customerPhone}</td>
-                    <td className="p-4 text-right font-mono text-xs text-slate-400">{formatPrice(d.totalDebt)}</td>
-                    <td className="p-4 text-right font-mono text-xs font-extrabold text-slate-900">{formatPrice(d.remainingDebt)}</td>
+                    <td className="p-4 font-nominal text-xs">{d.customerPhone}</td>
+                    <td className="p-4 text-right font-nominal text-xs text-slate-400">{formatPrice(d.totalDebt)}</td>
+                    <td className="p-4 text-right font-nominal text-xs font-extrabold text-slate-900">{formatPrice(d.remainingDebt)}</td>
                     <td className="p-4 text-center">
                       <div className="flex flex-col items-center justify-center">
-                        <span className={`font-mono text-xs ${isOverdue ? 'text-red-600 font-extrabold' : ''}`}>
+                        <span className={`font-nominal text-xs ${isOverdue ? 'text-red-600 font-extrabold' : ''}`}>
                           {formatDate(d.dueDate)}
                         </span>
                         {isOverdue && (
@@ -272,11 +273,11 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
               <div className="grid grid-cols-2 gap-3.5 bg-slate-50 p-4 rounded-xl border border-slate-200">
                 <div>
                   <span className="text-[10px] text-slate-500 uppercase font-bold">Total Utang Awal</span>
-                  <p className="text-sm font-bold font-mono text-slate-800">{formatPrice(selectedDebt.totalDebt)}</p>
+                  <p className="text-sm font-bold font-nominal text-slate-800">{formatPrice(selectedDebt.totalDebt)}</p>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-500 uppercase font-bold">Sisa Tagihan</span>
-                  <p className="text-sm font-bold font-mono text-emerald-750">{formatPrice(selectedDebt.remainingDebt)}</p>
+                  <p className="text-sm font-bold font-nominal text-emerald-700">{formatPrice(selectedDebt.remainingDebt)}</p>
                 </div>
                 <div className="col-span-2 border-t border-slate-200 pt-2.5 flex justify-between items-center text-xs">
                   <span className="text-slate-500">Jatuh Tempo:</span>
@@ -392,7 +393,7 @@ export default function UtangTab({ debts, shopSettings, onSaveDebt }: UtangTabPr
                           <span className="text-xs text-slate-600 font-bold">Cicilan #{index + 1}</span>
                           <span className="block text-[10px] text-slate-400">{formatDate(p.date)}</span>
                         </div>
-                        <span className="font-bold font-mono text-emerald-750 text-xs">+{formatPrice(p.amount)}</span>
+                        <span className="font-bold font-nominal text-emerald-700 text-xs">+{formatPrice(p.amount)}</span>
                       </div>
                     ))
                   )}

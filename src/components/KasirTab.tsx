@@ -775,10 +775,11 @@ export default function KasirTab({
   };
 
   const formatPrice = (num: any) => {
+    const sym = (shopSettings?.currencySymbol || 'Rp').replace(/\.$/, '').trim();
     if (num === undefined || num === null || isNaN(Number(num))) {
-      return (shopSettings?.currencySymbol || 'Rp.') + '\u00a00';
+      return `${sym} 0`;
     }
-    return (shopSettings?.currencySymbol || 'Rp.') + '\u00a0' + Number(num).toLocaleString('id-ID');
+    return `${sym} ${Number(num).toLocaleString('id-ID')}`;
   };
 
   return (
@@ -1200,7 +1201,7 @@ export default function KasirTab({
                   </div>
 
                   <div className="mt-3">
-                    <div className="text-base font-extrabold text-emerald-750">
+                    <div className="text-base font-extrabold text-emerald-600 font-nominal">
                       {formatPrice(p.price)}
                     </div>
                     
@@ -1267,7 +1268,7 @@ export default function KasirTab({
                 <h4 className="text-xs font-bold text-slate-900 truncate leading-tight">
                   {item.product.name}
                 </h4>
-                <div className="text-[11px] text-emerald-850 font-mono mt-0.5 font-bold">
+                <div className="text-[11px] text-emerald-650 font-nominal mt-0.5 font-bold">
                   {formatPrice(item.product.price)}
                 </div>
               </div>
@@ -1281,7 +1282,7 @@ export default function KasirTab({
                 >
                   <Minus className="w-3.5 h-3.5" />
                 </button>
-                <span className="text-xs font-mono font-bold text-slate-900 w-6 text-center select-none">
+                <span className="text-xs font-nominal font-bold text-slate-900 w-6 text-center select-none">
                   {item.quantity}
                 </span>
                 <button
@@ -1317,7 +1318,7 @@ export default function KasirTab({
         <div className="border-t border-slate-100 pt-3.5 space-y-3.5">
           <div className="flex items-center justify-between text-slate-600">
             <span className="text-sm font-semibold">Total Belanja</span>
-            <span className="text-lg font-extrabold text-slate-900 font-mono">
+            <span className="text-lg font-black text-slate-900 font-nominal">
               {formatPrice(getCartTotal())}
             </span>
           </div>
@@ -1440,7 +1441,7 @@ export default function KasirTab({
                   {parsedAmountPaid >= getCartTotal() && (
                     <div className="flex items-center justify-between text-xs text-emerald-800 pt-1.5 border-t border-slate-200 font-bold">
                       <span>Kembalian:</span>
-                      <span className="font-extrabold font-mono text-sm text-emerald-750">
+                      <span className="font-black font-nominal text-sm text-emerald-600">
                         {formatPrice(parsedAmountPaid - getCartTotal())}
                       </span>
                     </div>
@@ -1657,17 +1658,17 @@ export default function KasirTab({
               <div className="receipt-summary space-y-1 text-xs">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span className="font-bold font-mono">{activeInvoice.total.toLocaleString('id-ID')}</span>
+                  <span className="font-bold font-nominal">{activeInvoice.total.toLocaleString('id-ID')}</span>
                 </div>
                 {activeInvoice.paymentType === 'CASH' && (
                   <>
                     <div className="flex justify-between text-slate-600">
                       <span>Tunai Dibayar:</span>
-                      <span className="font-mono">{activeInvoice.amountPaid.toLocaleString('id-ID')}</span>
+                      <span className="font-nominal">{activeInvoice.amountPaid.toLocaleString('id-ID')}</span>
                     </div>
                     <div className="flex justify-between text-emerald-800 font-bold border-t border-dotted border-slate-200 pt-1">
                       <span>Kembalian:</span>
-                      <span className="font-mono">{activeInvoice.change.toLocaleString('id-ID')}</span>
+                      <span className="font-nominal">{activeInvoice.change.toLocaleString('id-ID')}</span>
                     </div>
                   </>
                 )}
@@ -1680,7 +1681,7 @@ export default function KasirTab({
                 {activeInvoice.paymentType === 'DEBT' && (
                   <div className="flex justify-between text-amber-800 font-bold">
                     <span>Sisa Utang:</span>
-                    <span className="font-mono">{activeInvoice.total.toLocaleString('id-ID')}</span>
+                    <span className="font-nominal">{activeInvoice.total.toLocaleString('id-ID')}</span>
                   </div>
                 )}
                 

@@ -753,7 +753,7 @@ export default function PpobTab() {
           {/* TOTAL OMSET */}
           <div className="bg-white border border-slate-200/80 rounded-2xl p-6 relative overflow-hidden group hover:border-sky-500/30 transition-all duration-300 shadow-sm hover:shadow-md">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Omset PPOB</p>
-            <h3 className="font-title text-3xl font-bold text-slate-800 mt-2 font-mono">Rp {totalOmzet.toLocaleString('id-ID')}</h3>
+            <h3 className="font-title text-3xl font-bold text-slate-800 mt-2 font-nominal">Rp {totalOmzet.toLocaleString('id-ID')}</h3>
             <TrendingUp className="absolute right-6 bottom-6 h-8 w-8 text-sky-500/15 group-hover:text-sky-500/30 transition-colors" />
             <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-sky-500 to-transparent opacity-50"></div>
           </div>
@@ -761,7 +761,7 @@ export default function PpobTab() {
           {/* TOTAL MODAL */}
           <div className="bg-white border border-slate-200/80 rounded-2xl p-6 relative overflow-hidden group hover:border-blue-500/30 transition-all duration-300 shadow-sm hover:shadow-md">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Modal PPOB</p>
-            <h3 className="font-title text-3xl font-bold text-slate-800 mt-2 font-mono">Rp {totalModal.toLocaleString('id-ID')}</h3>
+            <h3 className="font-title text-3xl font-bold text-slate-800 mt-2 font-nominal">Rp {totalModal.toLocaleString('id-ID')}</h3>
             <CreditCard className="absolute right-6 bottom-6 h-8 w-8 text-blue-500/15 group-hover:text-blue-500/30 transition-colors" />
             <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-transparent opacity-50"></div>
           </div>
@@ -771,7 +771,7 @@ export default function PpobTab() {
             <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
               <CheckCircle2 className="h-4 w-4 animate-bounce" /> Keuntungan Bersih PPOB
             </p>
-            <h3 className="font-title text-3xl font-bold text-emerald-600 mt-2 font-mono">Rp {totalProfit.toLocaleString('id-ID')}</h3>
+            <h3 className="font-title text-3xl font-bold text-emerald-600 mt-2 font-nominal">Rp {totalProfit.toLocaleString('id-ID')}</h3>
             <TrendingUp className="absolute right-6 bottom-6 h-8 w-8 text-emerald-500/15 group-hover:text-emerald-500/30 transition-colors" />
             <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-transparent opacity-50"></div>
           </div>
@@ -1219,15 +1219,15 @@ export default function PpobTab() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-500">Tagihan Listrik</span>
-                          <strong className="text-slate-800 font-mono">Rp {pascabayarDetail.tagihanUtama.toLocaleString('id-ID')}</strong>
+                          <strong className="text-slate-800 font-nominal">Rp {pascabayarDetail.tagihanUtama.toLocaleString('id-ID')}</strong>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-500">Biaya Admin PLN</span>
-                          <strong className="text-slate-800 font-mono">Rp {pascabayarDetail.adminFee.toLocaleString('id-ID')}</strong>
+                          <strong className="text-slate-800 font-nominal">Rp {pascabayarDetail.adminFee.toLocaleString('id-ID')}</strong>
                         </div>
                         <div className="flex justify-between border-t border-dashed border-slate-200 pt-2 text-emerald-600">
                           <span className="font-bold">Total Tagihan</span>
-                          <strong className="text-sm font-black font-mono">Rp {pascabayarDetail.totalTagihan.toLocaleString('id-ID')}</strong>
+                          <strong className="text-sm font-black font-nominal">Rp {pascabayarDetail.totalTagihan.toLocaleString('id-ID')}</strong>
                         </div>
                       </div>
                     </div>
@@ -1602,10 +1602,10 @@ export default function PpobTab() {
                       </div>
                       
                       <div className="text-right shrink-0">
-                        <span className="text-xs font-extrabold text-slate-800 font-mono block">
+                        <span className="text-xs font-extrabold text-slate-800 font-nominal block">
                           Rp {tx.biayaJual.toLocaleString('id-ID')}
                         </span>
-                        <span className="text-[9px] font-semibold text-emerald-600 font-mono">
+                        <span className="text-[9px] font-semibold text-emerald-600 font-nominal">
                           +{tx.profitToko.toLocaleString('id-ID')} profit
                         </span>
                       </div>
@@ -1790,7 +1790,7 @@ export default function PpobTab() {
                 <div className="border-t-2 border-dashed border-slate-300 pt-4 space-y-2.5">
                   <div className="flex justify-between text-sm text-slate-900 font-bold">
                     <span>Total Biaya:</span>
-                    <span className="text-base text-slate-950 font-black">Rp {receiptState.tx.biayaJual.toLocaleString('id-ID')}</span>
+                    <span className="text-base text-slate-950 font-black font-nominal">Rp {receiptState.tx.biayaJual.toLocaleString('id-ID')}</span>
                   </div>
                   
                   {/* Simulated barcode for aesthetics */}

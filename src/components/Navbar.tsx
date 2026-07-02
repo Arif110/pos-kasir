@@ -91,38 +91,40 @@ export default function Navbar({
         </div>
 
         {/* BAGIAN TENGAH: MENU NAVIGASI CORE UTAMA (Desktop) */}
-        <nav className="hidden lg:flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100/80">
-          {filteredNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                id={`nav_tab_${item.id}`}
-                key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id);
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`text-xs flex items-center gap-2 px-4 py-2 rounded-lg transition-all active:scale-[0.98] relative cursor-pointer ${
-                  isActive 
-                    ? 'bg-gradient-to-r from-sky-600 via-cyan-500 to-emerald-500 text-white font-extrabold shadow-md shadow-cyan-500/10' 
-                    : 'text-slate-600 hover:text-slate-900 font-bold hover:bg-slate-200/50'
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5 shrink-0" />
-                <span>{item.label}</span>
-                
-                {/* Dot Berpendar Amber untuk Stok Tipis */}
-                {item.id === 'stok' && lowStockCount > 0 && (
-                  <span className="absolute top-1 right-1.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white animate-pulse"></span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
+        <div className="hidden lg:flex flex-1 justify-center">
+          <nav className="flex items-center gap-0.5 xl:gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100/80 flex-nowrap overflow-hidden">
+            {filteredNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  id={`nav_tab_${item.id}`}
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`text-[11px] xl:text-xs flex items-center gap-1.5 xl:gap-2 px-2.5 xl:px-4 py-2.5 rounded-lg transition-all active:scale-[0.98] relative cursor-pointer whitespace-nowrap flex-nowrap shrink-0 select-none ${
+                    isActive 
+                      ? 'bg-gradient-to-r from-sky-600 via-cyan-500 to-emerald-500 text-white font-extrabold shadow-md shadow-cyan-500/10' 
+                      : 'text-slate-600 hover:text-slate-900 font-bold hover:bg-slate-200/50'
+                  }`}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="whitespace-nowrap tracking-wide">{item.label}</span>
+                  
+                  {/* Dot Berpendar Amber untuk Stok Tipis */}
+                  {item.id === 'stok' && lowStockCount > 0 && (
+                    <span className="absolute top-1 right-1.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white animate-pulse"></span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
         {/* BAGIAN KANAN: REALTIME CLOCK & PROFIL USER / OWNER */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 shrink-0">
           
           {/* Jam & Tanggal Digital Real-Time */}
           <div className="text-right hidden md:block leading-tight font-mono border-r border-slate-100 pr-4">

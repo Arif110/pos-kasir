@@ -153,10 +153,11 @@ export default function AnalitikTab({
   };
 
   const formatPrice = (num: any) => {
+    const sym = (shopSettings?.currencySymbol || 'Rp').replace(/\.$/, '').trim();
     if (num === undefined || num === null || isNaN(Number(num))) {
-      return (shopSettings?.currencySymbol || 'Rp.') + '\u00a00';
+      return `${sym} 0`;
     }
-    return (shopSettings?.currencySymbol || 'Rp.') + '\u00a0' + Number(num).toLocaleString('id-ID');
+    return `${sym} ${Number(num).toLocaleString('id-ID')}`;
   };
 
   const formatDate = (isoStr: string) => {
@@ -406,7 +407,7 @@ export default function AnalitikTab({
                 <span className="text-xs font-bold text-slate-500 tracking-wider uppercase">Omset Penjualan</span>
                 <span className="text-[10px] font-extrabold text-sky-600 bg-sky-50 px-2 py-0.5 rounded border border-sky-100">+100%</span>
               </div>
-              <div className="text-2xl font-extrabold text-slate-800 tracking-tight mb-2 font-mono">
+              <div className="text-2xl font-extrabold text-slate-900 tracking-tight mb-2 font-nominal">
                 {formatPrice(totalRevenue)}
               </div>
               <p className="text-[11px] text-slate-500 leading-normal">Akumulasi total omset kotor</p>
@@ -421,7 +422,7 @@ export default function AnalitikTab({
                 <span className="text-xs font-bold text-slate-500 tracking-wider uppercase">Laba Bersih</span>
                 <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">NET</span>
               </div>
-              <div className="text-2xl font-extrabold text-slate-800 tracking-tight mb-2 font-mono">
+              <div className="text-2xl font-black text-emerald-600 tracking-tight mb-2 font-nominal">
                 {formatPrice(totalProfit)}
               </div>
               <p className="text-[11px] text-slate-500 leading-normal">Selisih penjualan minus modal</p>
@@ -436,7 +437,7 @@ export default function AnalitikTab({
                 <span className="text-xs font-bold text-slate-500 tracking-wider uppercase">Piutang Aktif</span>
                 <span className="text-[10px] font-extrabold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">UTANG</span>
               </div>
-              <div className="text-2xl font-extrabold text-amber-600 tracking-tight mb-2 font-mono">
+              <div className="text-2xl font-extrabold text-amber-600 tracking-tight mb-2 font-nominal">
                 {formatPrice(totalOutstandingDebt)}
               </div>
               <p className="text-[11px] text-slate-500 leading-normal">Total tagihan utang belum lunas</p>
@@ -451,7 +452,7 @@ export default function AnalitikTab({
                 <span className="text-xs font-bold text-slate-500 tracking-wider uppercase">Jumlah Transaksi</span>
                 <span className="text-[10px] font-extrabold text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-100">VOL</span>
               </div>
-              <div className="text-2xl font-extrabold text-slate-800 tracking-tight mb-2 font-mono">
+              <div className="text-2xl font-extrabold text-slate-800 tracking-tight mb-2 font-nominal">
                 {totalTxCount} <span className="text-lg font-medium text-slate-500">Nota</span>
               </div>
               <p className="text-[11px] text-slate-500 leading-normal">Total faktur terbit di database</p>
@@ -714,7 +715,7 @@ export default function AnalitikTab({
                     <div className="bg-slate-50/50 border border-slate-200/60 p-5 rounded-2xl border-l-4 border-sky-500 shadow-sm">
                       <p className="text-[10px] sm:text-xs font-semibold text-slate-500 tracking-wider uppercase mb-1">Total Stok Toko</p>
                       <div className="flex items-baseline gap-2">
-                        <span className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight font-mono">{totalAllStock.toLocaleString('id-ID')}</span>
+                        <span className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight font-nominal">{totalAllStock.toLocaleString('id-ID')}</span>
                         <span className="text-xs font-medium text-slate-500">Unit</span>
                       </div>
                     </div>
@@ -1068,17 +1069,17 @@ export default function AnalitikTab({
                         {report.monthName}
                       </td>
                       <td className="py-4 px-6 text-center">
-                        <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-bold border border-slate-200/60 font-mono">
+                        <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-bold border border-slate-200/60 font-nominal">
                           {report.txCount} Transaksi
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-center font-mono font-bold text-slate-600">
+                      <td className="py-4 px-6 text-center font-nominal font-bold text-slate-600">
                         {report.itemsSold.toLocaleString('id-ID')} unit
                       </td>
-                      <td className="py-4 px-6 text-right font-semibold text-slate-900 font-mono whitespace-nowrap">
+                      <td className="py-4 px-6 text-right font-semibold text-slate-900 font-nominal whitespace-nowrap">
                         {formatPrice(report.revenue)}
                       </td>
-                      <td className="py-4 px-6 text-right font-extrabold text-emerald-600 font-mono whitespace-nowrap">
+                      <td className="py-4 px-6 text-right font-extrabold text-emerald-600 font-nominal whitespace-nowrap">
                         {formatPrice(report.profit)}
                       </td>
                     </tr>
